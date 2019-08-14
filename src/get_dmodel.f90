@@ -1630,7 +1630,7 @@ IF (mpi__myrank.EQ.1) PRINT*, NSLAB_PER_FREEV
     !
     ! First, we estimate the chi2:
     !
-    CALL CALCULATE_CHI2()
+    CALL NEW_CALCULATE_CHI2()
     !
     ! Now  we split the model into ...
     ! ... the various atmospheric physical parameters:

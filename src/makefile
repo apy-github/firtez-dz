@@ -30,7 +30,7 @@ ifeq ($(COMP),intel)
   FPP = -fpp
   # Debugging: FOPT = -fopenmp -traceback -debug all -check all -g -O0
 #
-  FR8 = -freal-4-real-8
+  FR8 = -r8
 #
 else
 # Gfortran compiler:
