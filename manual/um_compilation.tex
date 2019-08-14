@@ -39,12 +39,12 @@ Once this software is compiled you can proceed with the compilation of firtez-dz
 %
 Once done, save the {\it makefile} and you are almost ready to compile the code.\\
 
-However, it is IMPORTANT to notice that the file {\it } does only provide the name and the input and output variable. The body of each subroutine ({\it SPLIE2}, {\it SPLIN2}, {\it SPLINE}, and {\it SPLINT}) must be filled using Numerical Recipes (it might be interesting, depending on the size of model atmospheres you are planning to use to increase the {\it NN} parameter of {\it SPLIE2} and {\it SPLIN2} to larger values, for instance 1000).\\
+However, it is IMPORTANT to notice that the file {\it splines.f90} does only provide the name of the four subroutines and the input and output variables of each one. The body of each subroutine ({\it SPLIE2}, {\it SPLIN2}, {\it SPLINE}, and {\it SPLINT}) inside the {\it splines.f90} file must be filled using Numerical Recipes (it might be interesting, depending on the size of model atmospheres you are planning to use to increase the {\it NN} parameter of {\it SPLIE2} and {\it SPLIN2} to larger values, for instance 1000).\\
 
-Once these four subroutines are written, you can proceed typing:\\
+Once these four subroutines are written and in the same {\it src} directory, you can proceed typing:\\
 {\it make clean}\\
 This would remove all the *.mod, *.o, and *.x files and then:\\
-{\it make firtez}\\
+{\it make firtez-dz}\\
 After the latter, the code should compile successfully creating an executable file called: {\it firtez-dz.x}. By default, {\it gnu} fortran compiler is assumed, yet if you want to use intel's, then you compile the code typing:\\
 {\it make firtez COMP=intel}\\
 

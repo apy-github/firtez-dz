@@ -1,7 +1,7 @@
 #
 # Makefile for FIRTEZ-dz
 #-------------------------------------------
-# JM Borrero & Adur Pastor 23rd October 2017
+# A. Pastor Yabar & J.M. Borrero August 2019
 #
 #
 #===========================================
