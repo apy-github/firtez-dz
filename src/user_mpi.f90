@@ -21,7 +21,6 @@ MODULE USER_MPI
   PUBLIC :: MPI_INTEGER
   PUBLIC :: MPI_LOGICAL
   PUBLIC :: START_MPI, END_MPI, NICE_WAITING
-  PUBLIC :: MPI_BCAST
   PRIVATE
   !
   !************************************************
