@@ -1,0 +1,53 @@
+
+% Spectral lines database file:
+\label{sec:spectral_line_database}
+%
+
+Spectral line database is the file in which spectral lines atomic data is supplied to the code. It is very similar to SIR code LINES file, with some differences though. Each row specifies the data for a given atomic transition and the various columns are:
+\begin{enumerate}
+  \item Index: An integer number identifying each atomic data entry. It can be any integer.
+  \item Atomic number (Z).
+  \item Ionisation stage: Only lines in neutral, once, and twice ionization stages are allowed. Adimensional.
+  \item Central wavelength of the transition: float number, in angstrom.
+  \item Lower energy level: the format is as follows: X.XCY.Y, where X.X refers to the spin momentum, C refers to the angular momentum, and Y.Y to the $J$ quantum number of the lower level.
+  \item Upper energy level: the format is as follows: X.XCY.Y, where X.X refers to the spin momentum, C refers to the angular momentum, and Y.Y to the $J$ quantum number of the upper level.
+  \item Oscillator strength ($\log gf$): real number (might be positive or negative)
+  \item Ionization energy (in eV) of the lower level: real number
+  \item Barklem collisional theory velocity parameter ($\alpha$): real number, adimensional.
+  \item Barklem collisional theory cross-section: real number in atomic units.
+  \item Barklem collisional theory transition type: two character string.
+  \item Barklem collisional theory lower level energy limit: real number in ${\rm cm}^{-1}$.
+  \item Barklem collisional theory upper level energy limit: real number in ${\rm cm}^{-1}$.
+\end{enumerate}
+
+Some comments on these last five parameters (the ones related to ABO collisional theory) are required. If the user provides the transition type and the other are set to 0.0, then the tables published by Barklem and co-authors are interpolated to the effective principal quantum number ($n^{*}$). If the user supplies the velocity parameter ($\alpha$) and the cross-section and the last two fields are 0.0, then, independently of the transition type supplied (yet two string characters must be supplied), the values provided for the velocity parameter ($\alpha$) and the cross-section are used. Finally, if the last two (lower and upper energy limits) are non-zero, transition type parameter is MANDATORY. In this case, the last two parameters (lower and upper energy limits) are used to calculate the effective principal quantum number ($n^{*}$) and then, using the transition type parameter, the ABO tables are interpolated accordingly. The values for the velocity parameter ($\alpha$) and cross-section for each entry of the spectral line database is stored in the output log file {\it info.log}.\\
+
+Let use Fe{\sc I} 6173.3 {\AA} spectral line as an example.
+
+The first possibility might be to provide the transition type, i.e. {\it sp} as:\\
+
+\begin{sldbox}[label={tb:sldex01}]{{\it Spectral line database ex. 1}}
+  \scriptsize
+  72  026  1   6173.3354  5.0P1.0  5.0D0.0  -2.880  2.223  0.000  0000.0 sp 0.0  0.0
+  \normalsize
+\end{sldbox}
+
+If one does so, one would retrieve a velocity parameter ($\alpha$) of 0.2406 and a cross-section value of 327.2273 and the values are wrong. It is so because for the energy levels involved in this transition the energy limit and the ionization energy are not the same. In this case, there are two possibilities: 1- We know the values for the velocity parameter ($\alpha$) and the cross-section:
+
+\begin{sldbox}[label={tb:sldex02}]{{\it Spectral line database ex. 2}}
+  \scriptsize
+  75  026  1   6173.3354  5.0P1.0  5.0D0.0  -2.880  2.223  0.2660  280.5707 aa 0.0  0.0
+  \normalsize
+\end{sldbox}
+
+In this case, the three last parameters are ignored by the code. Or, 2- we calculate the energy limit of each level involved in the transition (in ${\rm cm}^{-1}$):
+
+\begin{sldbox}[label={tb:sldex03}]{{\it Spectral line database ex. 3}}
+  \scriptsize
+  73  026  1   6173.3354  5.0P1.0  5.0D0.0  -2.880  2.223  0.000  0000.0 sp 77212.151  65610.304
+  \normalsize
+\end{sldbox}
+
+As you can check at the beginning of {\it info.log} the ``Collisional cross section'' and ``Velocity parameter'' are the same as specified in \bref{tb:sldex02}. These last two cases are correct, yet the first one leads to incorrect results.
+
+

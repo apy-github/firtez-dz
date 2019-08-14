@@ -1,0 +1,50 @@
+
+\documentclass[12pt,a4]{article}
+
+\usepackage{hyperref}
+\hypersetup{colorlinks=True}
+\hypersetup{urlcolor=cyan}
+
+\usepackage{tcolorbox}
+% Following Ch. 5 of http://ctan.space-pro.be/tex-archive/macros/latex/contrib/tcolorbox/tcolorbox.pdf
+\newtcolorbox[auto counter,number within=section]{ifbox}[2][]{%
+title=Input file Ex.~\thetcbcounter: #2,#1}
+\newtcolorbox[auto counter,number within=section]{sldbox}[2][]{%
+title=Spectral line database Ex.~\thetcbcounter: #2,#1}
+
+\newcommand{\bref}[1]{Ex. \ref{#1}}
+
+\addtolength{\oddsidemargin}{-2.cm}
+\addtolength{\evensidemargin}{-2.cm}
+\addtolength{\topmargin}{-2cm}
+\setlength{\textwidth}{175mm}
+\setlength{\textheight}{227mm}
+
+\begin{document}
+
+\title{Forward Inverse solver of the Radiative Transfer Equation for Zeeman polarization in geometrical scale\\firtez-dz\\v0.0\\User manual}
+\author{Pastor Yabar, A. and Borrero, J. M.}
+\date{2019.08}
+\maketitle
+
+\clearpage
+\tableofcontents
+%
+% Disclaimer:
+\clearpage
+\vspace*{\fill}
+\noindent The software is provided ``as is'', without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. in no event shall the authors or copyright holders be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software.
+%
+\clearpage
+% Compilation:
+\section{Compilation}
+\input{um_compilation.tex}
+%
+\clearpage
+% Execution:
+\section{Execution}
+\input{um_execution.tex}
+
+\end{document}
+
+

@@ -1,0 +1,52 @@
+%
+% Pre-requisites:
+\subsection{Pre-requisites:}
+\label{ssec:prereq}
+%
+Before attempting the compilation of {\it firtez-dz}, you need the following libraries:
+%
+\begin{itemize}
+  \item {\bf LAPACK:} \\
+  Versions tested: 3.7.0\\
+  You can download it from \href{http://www.netlib.org/lapack/}{here}.\\
+  \item {\bf MPI:}\\
+  Versions tested: 3.1.0\\
+  You can download it from \href{https://www.open-mpi.org/}{here}.\\
+  \item {\bf FFTW3:}\\
+  Versions tested: 3.3.8\\
+  You can download it from \href{http://www.fftw.org/}{here}.\\
+\end{itemize}
+%
+% Compiling:
+\subsection{Compilation:}
+Once this software is compiled you can proceed with the compilation of firtez-dz. In {\it src/} directory there is a {\it makefile} file. At the beginning of the file you should define the following variables according to your case:\\
+\begin{itemize}
+%  \item {\it FC}:\\
+%  gcc compiler: {\it FC=mpif90}\\
+%  intel compiler: {\it FC=mpifort}\\
+%  \item {\it CC}:\\
+%  Either {\it FC=mpicc} for {\it FC=mpifort}\\
+  \item {\it LIBS}:\\
+  If you installed (or you already had them installed) all the above libraries in the default library path, you can leave this variable empty. Otherwise, add as many of the following lines as needed, i.e., only those for which your installation is not in the default path.\\
+  {\it LIBS= \textbackslash}\\
+  \hspace{10mm}{\it -L /path\_to\_lapack\_lib\_dir/ -llapack -lblas \textbackslash}\\
+  {\it \ \ \ \ \ -L /path\_to\_fftw3\_lib\_dir/ -lfftw3}\\
+  \item {\it INCS}:\\
+  If you installed (or you already had them installed) all the software (see Sec. \ref{ssec:prereq}) in the default library path, you can leave this variable empty. Otherwise add as many as the following lines as needed:\\
+  {\it INCS= \textbackslash}\\
+  {\it \ \ \ \ \ -I /path\_to\_fftw3\_include\_dir/}\\
+\end{itemize}
+%
+Once done, save the {\it makefile} and you are almost ready to compile the code.\\
+
+However, it is IMPORTANT to notice that the file {\it } does only provide the name and the input and output variable. The body of each subroutine ({\it SPLIE2}, {\it SPLIN2}, {\it SPLINE}, and {\it SPLINT}) must be filled using Numerical Recipes (it might be interesting, depending on the size of model atmospheres you are planning to use to increase the {\it NN} parameter of {\it SPLIE2} and {\it SPLIN2} to larger values, for instance 1000).\\
+
+Once these four subroutines are written, you can proceed typing:\\
+{\it make clean}\\
+This would remove all the *.mod, *.o, and *.x files and then:\\
+{\it make firtez}\\
+After the latter, the code should compile successfully creating an executable file called: {\it firtez-dz.x}. By default, {\it gnu} fortran compiler is assumed, yet if you want to use intel's, then you compile the code typing:\\
+{\it make firtez COMP=intel}\\
+
+
+%

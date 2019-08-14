@@ -1,0 +1,191 @@
+%
+% Example input file 1. Let say we want to calculate the optical depth scale of a MHD simulation snapshot...
+% ... stored in the model atmosphere file: mhd_modeltau.bin, which has 512x512x492 grid points
+
+These examples are provided in the {\it tests} directory together with the standard release.\\
+
+In the first one, we just re-calculate the gas pressure and density for a model atmosphere:
+
+\begin{ifbox}[label={tb:example01}]{{\it Example 1}}
+  \scriptsize
+FILEMODEL:\\
+test\_atmos.bin\\
+MODE:\\
+hydrostatic\\
+HYDROSTATIC:\\
+yes\\
+MISC SETUP:\\
+MODPATH ../../default/\\
+SLDPATH ../../default/\\
+END:
+  \normalsize
+\end{ifbox}
+
+%{\Huge missing comments on the purpose. Maybe relate it to ipython notebooks?}
+
+%
+% Example input file 2. ...
+% ... 
+
+In this second example, we calculate the optical depth scale at 5000 {\AA} for the input model atmosphere used in the previous example, i.e. without the assumption of hydrostatic equilibrium.\\
+
+\begin{ifbox}[label={tb:example02}]{{\it Example 2}}
+  \scriptsize
+FILEMODEL:\\
+test\_atmos.bin\\
+MODE:\\
+tau\\
+HYDROSTATIC:\\
+no\\
+MISC SETUP:\\
+MODPATH ../../default/\\
+SLDPATH ../../default/\\
+END:
+  \normalsize
+\end{ifbox}
+
+%{\Huge missing comments on the purpose. Maybe relate it to ipython notebooks?}
+
+%
+% Example input file 3. ...
+% ... 
+
+Now, we combine the two previous cases calculating the optical depth scale of a model atmosphere whose gas pressure and density are previously calculated assuming hydrostatic equilibrium.
+
+\begin{ifbox}[label={tb:example03}]{{\it Example 3}}
+  \scriptsize
+FILEMODEL:\\
+test\_atmos.bin\\
+MODE:\\
+tau\\
+HYDROSTATIC:\\
+yes\\
+MISC SETUP:\\
+MODPATH ../../default/\\
+SLDPATH ../../default/\\
+END:
+  \normalsize
+\end{ifbox}
+
+%{\Huge missing comments on the purpose. Maybe relate it to ipython notebooks?}
+
+%
+% Example input file 4. ...
+% ... 
+
+Now we consider the case of synthesising some Stokes profiles. To do so, we are going to synthesis the full Stokes vector for the blended lines 6301.5 and 6302.5 {\AA}.
+
+\begin{ifbox}[label={tb:example04}]{{\it Example 4}}
+  \scriptsize
+LINES:\\
+4,5 500 -700.0 5.0\\
+FILEPROFILE:\\
+syn\_profile.bin\\
+FILEMODEL:\\
+test\_atmos.bin\\
+MODE:\\
+synthesis\\
+HYDROSTATIC:\\
+no\\
+STOKES SETUP:\\
+STKI\\
+STKQ\\
+STKU\\
+STKV\\
+MISC SETUP:\\
+MODPATH ../../default/\\
+SLDPATH ../../default/\\
+OUTPATH ./out\_dir/\\
+END:
+  \normalsize
+\end{ifbox}
+
+%{\Huge missing comments on the purpose. Maybe relate it to ipython notebooks?}
+
+%
+% Example input file 5. ...
+% ... 
+
+Now we proceed exactly on the same way, but assuming hydrostatic equilibrium.
+
+\begin{ifbox}[label={tb:example05}]{{\it Example 5}}
+  \scriptsize
+LINES:\\
+4,5 500 -700.0 5.0\\
+FILEPROFILE:\\
+syn\_profile.bin\\
+FILEMODEL:\\
+test\_atmos.bin\\
+MODE:\\
+synthesis\\
+HYDROSTATIC:\\
+yes\\
+MISC SETUP:\\
+MODPATH ../../default/\\
+SLDPATH ../../default/\\
+OUTPATH ./out\_dir/\\
+END:
+  \normalsize
+\end{ifbox}
+
+Note here that we do not specify any Stokes parameter to be synthesis as by default all of them are calculated.
+
+%
+% Example input file 6. ...
+% ... 
+
+\begin{ifbox}[label={tb:example06}]{{\it Example 6}}
+  \scriptsize
+LINES:\\
+4,5 500 -700.0 5.0\\
+FILEPROFILE:\\
+syn\_profile.bin\\
+FILEMODEL:\\
+test\_atmos.bin\\
+MODE:\\
+inversion\\
+HYDROSTATIC:\\
+yes\\
+STOKES SETUP:\\
+STKI\\
+STKQ\\
+STKU\\
+STKV\\
+INVERSION SETUP:\\
+TEM\\
+VLOS\\
+MISC SETUP:\\
+DATAPATH ../test\_syn1/out\_dir/\\
+MODPATH ../../default/\\
+SLDPATH ../../default/\\
+OUTPATH ./out\_dir/\\
+END:
+  \normalsize
+\end{ifbox}
+
+
+
+
+%
+% Example input file 7. ...
+% ... 
+
+\begin{ifbox}[label={tb:example07}]{{\it Example 7}}
+  \scriptsize
+  \normalsize
+\end{ifbox}
+
+
+
+
+%
+% Example input file N. ...
+% ... 
+
+\begin{ifbox}[label={tb:example0N}]{{\it Example N}}
+  \scriptsize
+  \normalsize
+\end{ifbox}
+
+
+

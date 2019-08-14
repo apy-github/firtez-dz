@@ -1,0 +1,243 @@
+%
+% General outline:
+The code is able to perform different task for which, there are two mandatory files in addition to the executable itself: the input file and the spectral line database file.
+%
+% Input file:
+\subsection{Input file:}
+It is a plain text file in which there are some mandatory fields and some optional ones. Each field is defined starting with its name (in capital letters) followed by colon and ends whenever another field starts or the end is reached, which is denoted with: {\it END:}. An example is provided after explaining each of the possible fields.\\
+
+The following list covers ALL the fields the code works with, anything outside is omitted. The order with which the various {\it fields} appear does not matter.\\
+\begin{itemize}
+  \item {\it LINES:} {\bf Mandatory}\\
+  It specifies the line/lines from the ones provided in the spectral lines database file (see Sec. \ref{sec:spectral_line_database}). It might contain as many spectral regions as desired and the format to supply them is as follows:\\
+  index  nnn   init    ddd\\
+  where the various parameters are:
+  \begin{itemize}
+    \item {\it index} refers to the spectral line index or indexes of the spectral line database to be synthesised together. If one is supplied the RTE is solved for that line. If several indexes (separated by comma) are supplied, then the RTE is solved for the whole set simultaneously.
+    \item {\it nnn} (integer) specifies the number of spectral points to be solved.
+    \item {\it init} (float) specifies the difference with respect to the reference wavelength set in the spectral line database (in m{\AA}) of the first wavelength point to consider. For the case of blended spectral regions, the reference wavelength is the one appearing in the spectral line database for the very first of the spectral lines specified.
+    \item {\it ddd} (float) is the wavelength step in between each wavelength point in m{\AA}.
+  \end{itemize}
+  An example of such field would be as follows:\\
+\begin{ifbox}[label={tb:lines}]{{\it Lines}}
+  \scriptsize
+  \ldots\\
+  LINES:\\
+  4 10 -123.45 6.7\\
+  4,5 15 -234.56 7.8\\
+  9 25 -3456.78 90.1\\
+  END:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  In the first line, we specify that the spectral line identified with index {\it 4} in the spectral line database file is sampled in {\it 10} spectral points starting from {\it 123.45} m{\AA} of the line core (value specified in the spectral line database file) with a spectral sample of {\it 6.7} m{\AA}.
+  In the second line, we also use the same spectral line as before ({\it 4} in the spectral line database file) but now, it is blended with another spectral line ({\it 5} in the spectral line database file). This spectral region is sampled at {\it 15} spectral points starting from {\it -234.56} m{\AA} of the line core of the first index ({\it 4}) (specified in the spectral line database file) with a spectral sample of {\it 7.8} m{\AA}.
+  Finally, we consider a third spectral line ({\it 9} in the spectral line database file) which is sampled in 25 wavelength points starting from {\it -3456.78} of the core of line {\it 9} and equally spaced by {\it 90.1}.\\
+  \item {\it BOX:} {\bf Optional}\\
+  This field specifies the spatial dimension of the considered atmosphere to be handled. It has three mandatory lines that refer, respectively, to the {\it x}, {\it y}, and {\it z} spatial dimension and the three of them follow the same format:\\
+  nn   dd\\
+  where {\it nn} is the number of points (integer) in each dimension and {\it dd } is the step (real number, in km) sampling along each spatial direction. As an example, let us consider the following piece of input file:\\
+\begin{ifbox}[label={tb:box}]{{\it Box}}
+  \scriptsize
+  \ldots\\
+  BOX:\\
+  2  9.01\\
+  23  78.9\\
+  512  1.234\\
+  FILEMODEL:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  Here we would be considering a piece of atmosphere extended 2 spatial grid points in {\it x} dimension at a distance of {\it 9.01} km from each other, {\it 23 } spatial points in the {\it y} direction sampled every {\it 78.9} km, and finally, covering {\it 512} km in {\it z} direction every {\it 1.234} km. Notice here that in contrast to the previous piece of example, this field section ends as another field ({\it FILEMODEL:}) begins, i.e., not every field must end with {\it END:}.\\
+  \item {\it FILEPROFILE:} {\bf Mandatory in {\it INVERSION} and {\it SYNTHESIS} mode, otherwise Inactive}\\
+  It is a string containing the name of the file where spectral profiles are to be written. It is an optional field BUT it is mandatory for the synthesis and inversion modes. For example, if we would like to store the synthetic profiles for a supplied atmosphere in a file named {\it synthetic\_profile.bin}, we would write the following:\\
+\begin{ifbox}[label={tb:box}]{{\it Box}}
+  \scriptsize
+  \ldots\\
+  BOX:\\
+  synthetic\_profile.bin\\
+  FILEMODEL:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  \item {\it FILEMODEL:} {\bf Mandatory}\\
+  This field is also a string containing the name of the model atmosphere to deal with. It is a MANDATORY field. For example, if our atmosphere is in {it model\_atmosphere.bin}, then we would have:\\
+\begin{ifbox}[label={tb:box}]{{\it Box}}
+  \scriptsize
+  \ldots\\
+  BOX:\\
+  model\_atmosphere.bin\\
+  MODE:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  \item {\it HYDROSTATIC:} {\bf Optional (default: {\it NO})}\\
+  It is not a mandatory field and it can be {\it YES} or {\it NO}. If not specified, default is {\it NO}. If {\it YES}, the atmosphere is assumed in hydrostatic equilibrium, which means that, provided a boundary condition, it proceeds with the integration of the pressure using a Runge-Kutta 4 obtaining the gas pressure and density stratifications under hydrostatic equilibrium. If {\it NO}, then it takes the supplied gas pressures and densities to proceed with the resolution of the radiative transfer equation\footnote{Notice that either gas pressure or density are modified so that the equation of state is fulfilled at every height.}. For example, if we want to assume hydrostatic equilibrium, we would have the following:\\
+\begin{ifbox}[label={tb:hydrostatic}]{{\it Hydrostatic}}
+  \scriptsize
+  \ldots\\
+  HYDROSTATIC:\\
+  YES\\
+  MODE:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  \item {\it MODE:} {\bf Mandatory}\\
+  This input tells the code what has to be done. There are currently 4 possibilities:
+  \begin{itemize}
+    \item {\it SYNTHESIS}\\
+    It uses the model atmosphere supplied to solve the radiative transfer equation and get the synthetic Stokes spectra. In this mode, {\it FILEPROFILE:} is mandatory.
+    \item {\it INVERSION}\\
+    It uses the model atmosphere supplied and the profiles supplied to retrieve the model atmosphere that best fits the provided Stokes spectra. In this mode, {\it FILEPROFILE:} and {\it INVERSION SETUP:} are mandatory.
+    \item {\it TAU}\\
+    It uses the provided model atmosphere to estimate the $\lg\tau_{5}$ scale.
+    \item {\it HYDROSTATIC}\\
+    It uses the provided temperature and gas pressure boundary condition to solve hydrostatic equilibrium equation. It requires that {\it HYDROSTATIC:} field is {\it YES}.
+  \end{itemize}
+  \item {\it STOKES SETUP:} {\bf Optional (default: all active)}\\
+  Optional field that specifies Stokes parameters to be considered. 
+  It is useless except for {\it SYNTHESIS} and {\it INVERSION} mode. It specifies the Stokes parameters to be synthesis/inverted and/or the weights (only for {\it INVERSION}) with which one would like to perform the inversion. There might appear up to 4 lines inside this field with any/all of the following: {\it STKI}, {\it STKQ}, {\it STKU}, and/or {\it STKV}. By default all of them are synthesised/inverted and for the inversion, by default weights are set to 1. For example, if one wants to synthesis Stokes I and V for a given model atmosphere, then {\it STOKES SETUP:} field should appear as follows:\\
+\begin{ifbox}[label={tb:stokes_setup1}]{{\it Stokes setup (1)}}
+  \scriptsize
+  \ldots\\
+  STOKES SETUP:\\
+  STKI\\
+  STKV\\
+  MODE:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  And if for instance, what we want is to invert all the Stokes parameters we might not include this field at all. If we want to set different weights for each Stokes parameter though, we must include this field as follows:\\
+\begin{ifbox}[label={tb:stokes_setup2}]{{\it Stokes setup (2)}}
+  \scriptsize
+  \ldots\\
+  STOKES SETUP:\\
+  STKI\\
+  STKV  2.4\\
+  STKQ  4.2\\
+  STKU  5.9\\
+  MODE:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  where we would be setting the weight of Stokes I to 1 (default value), of Stokes Q to {\it 4.2}, {\it 5.9} for Stokes U, and {\it 2.4} for Stokes V. Notice here that weights appear quadratically in the definition of $\chi^2$:
+  \begin{equation}
+  \chi^2\propto\sum_{I,Q,U,V}\frac{\sum_{\lambda}(O_{\lambda}-I^{syn}_{\lambda})^2*w_{I,Q,U,V}^2}{\sigma_{I,Q,U,V}^2}
+  \end{equation}
+  \item {\it INVERSION SETUP:} {\bf Mandatory in {\it INVERSION} mode, otherwise Inactive}\\
+  This field is mandatory for {\it INVERSION} mode. It can take any or almost all of the combinations between: {\it TEM}, {\it P0}, {\it PGAS}, {\it RHO}, {\it BX}, {\it BY}, {\it BZ}, and/or {\it VLOS}. It is NOT possible to set {\it TEM}, {\it PGAS}, and {\it RHO} at the same time since it might lead to combination of thermodynamical parameters that do not fulfil the equation of state. It is also not possible to invert at the same time {\it P0} with {\it PGAS} or {\it RHO}, since the former requires of assuming hydrostatic equilibrium. If {\it P0} is active with {\it PGAS}, {\it RHO}, or both, execution will stop. If {\it P0} is active and {\it HYDROSTATIC} is {\it NO} the code will stop execution. For the inversion, by default, the code will assume that one wants to invert all the available slabs. It is possible to limit the number of perturbations to be calculated by physical parameter by adding an accompanying number to each physical parameter.\\
+  {\it POW} 2\\
+  {\it MAXITER} 2\\
+  For example, let say we want to invert the temperature, the three magnetic field components and line-of-sight velocity for a given profile. But, we want to let all the temperatures slabs as free parameters, only perturb each of the three magnetic field components at two points and the line-of-sight velocity at five points, then we should supply the following {\it INVERSION SETUP} field: \\
+\begin{ifbox}[label={tb:inversion_setup}]{{\it Inversion setup}}
+  \scriptsize
+  \ldots\\
+  INVERSION SETUP:\\
+  TEM\\
+  BX   2\\
+  BY   2\\
+  BZ   2\\
+  VLOS  5\\
+  END:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  Also it is possible to use {\it INVERSION SETUP:} field with {\it SYNTHESIS} mode when one wants to write down the response functions for a model atmosphere. For this only case, it is possible to set at the same time all of the following options: {\it TEM}, {\it PGAS}, {\it RHO}, {\it BX}, {\it BY}, {\it BZ}, and/or {\it VLOS}.\\
+  \item {\it CONTINUUM NORMALIZATION:} {\bf Optional (default: active)}\\
+  Optional field, useful for {\it SYNTHESIS} and {\it INVERSION} modes. Specifies whether continuum normalization to HSRA at disk center must be set or not. Default is {\it TRUE}. To disable it, one may use:\\
+\begin{ifbox}[label={tb:continuum_normalization}]{{\it Continuum normalization}}
+  \scriptsize
+  \ldots\\
+  CONTINUUM NORMALIZATION:\\
+  FALSE\\
+  END:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  \item {\it COUPLED INVERSION:} {\bf Optional (default: inactive)}\\
+  Optional field only valid in {\it INVERSION} mode. This field is used for the inversion using Michiel van Noort's two-dimensional coupled inversion (van Noort, M. 2012). It requires at least one line, though some additional lines might be included in this field. The mandatory line specifies the file to contain the two-dimensional point-spread-function file name and should be written as follows:\\
+\begin{ifbox}[label={tb:coupled_inversion1}]{{\it Coupled inversion (1)}}
+  \scriptsize
+  \ldots\\
+  COUPLED INVERSION:\\
+  FILENAME  psf2d.bin\\
+  FILEPROFILE:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  In addition to that, there might be three additional input lines specifying the size of the block to consider ({\it BLCKSZ}), the number of threads to use for the matrix inversion ({\it NMTHRD}), or/and the radius (in pixels) of the point-spread-function to consider during the inversion {\it PSFRAD}.\\
+\begin{ifbox}[label={tb:coupled_inversion1}]{{\it Coupled inversion (2)}}
+  \scriptsize
+  \ldots\\
+  COUPLED INVERSION:\\
+  FILENAME  psf2d.bin\\
+  BLCKSZ 20\\
+  NMTHRD 5\\
+  PSFRAD 6\\
+  FILEPROFILE:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  If any of the optional lines are missing, default values are taken: $BLCKSZ=10$, $NMTHRD=$ as many as MPI slaves, and $PSFRAD=3$. Be aware that since these values depend on the point-spread-function used, default values might not be optimal for your case.
+  \item {\it WRITE RESPONSE FUNCTION:} {\bf Optional (default: inactive)}\\
+  This is only useful for the {\it SYNTHESIS} mode. It goes in combination with {\it INVERSION SETUP:} and it can be either {\it NO} (default) or {\it YES}. This option MUST be used very carefully since it writes down files that can be extremely huge. For instance, if we are writing down the response functions for all the available physical parameters of a model atmosphere with 512 times 512 times 492 points at 100 spectral points, we will require more than 670 GB!. If one really wants to write down the response functions (provided that {\it MODE} is set to {\it SYNTHESIS}) then input file must contain:
+\begin{ifbox}[label={tb:write_response_function}]{{\it Write response function}}
+  \scriptsize
+  \ldots\\
+  WRITE RESPONSE FUNCTION:\\
+  YES\\
+  MODELNAME:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  \item {\it LINE SPREAD FUNCTION:} {\bf Optional (default: inactive)}\\
+  This field is optional and has effect only in {\it SYNTHESIS} and {\it INVERSION} mode. It specifies the gaussian function to use to simulate the effect of the instrumental transmission function. It has to be specified for each of the spectral ranges considered. The format to provide this input parameter is:\\
+  ss  ww,\\
+  where {\it ss} is the standard deviation of the instrumental line-spread-function (in m{\AA}) and {\it ww} is the offset from the zero wavelength reference (in m{\AA}). Following the example shown in \bref{tb:lines}, we would like to set an instrumental line-spread-function of Gaussian shape with a standard deviation of {\it 3.5} for the first two spectral ranges (starting spectral line index {\it 4}) and {\it 7.6} for the last one (spectral line index {\it 9}), and additionally, the offset for the middle spectral region is going to be 1.4 m{\AA}:\\
+\begin{ifbox}[label={tb:line_spread_function}]{{\it Line spread function}}
+  \scriptsize
+  \ldots\\
+  LINE SPREAD FUNCTION:\\
+  3.5 0.\\
+  3.5 1.4\\
+  7.6 0\\
+  CONTINUUM NORMALIZATION:\\
+  \ldots
+  \normalsize
+\end{ifbox}
+  It is important to note that there MUST be the exactly same number of inputs as for the {\it LINES} field, otherwise, the code will stop.
+  \item {\it MISC SETUP:} {\bf Optional (default: see below)}\\
+  In addition to the previous inputs, there are some additional possibilities:
+  \begin{enumerate}
+    \item {\it SVDTOL} {\bf Optional (default: $10^{-4}$)}\\
+    Used in {\it INVERSION} mode. It defines the threshold used for the number of eigen-values used during the inversion of the dampened Hessian matrix.
+    \item {\it NOISE} {\bf Optional (default: $10^{-4}$)}\\
+    Used in {\it INVERSION} mode. It defines the standard deviation/noise of the data to be used during the inversion and error calculation.
+    \item {\it TEMP} {\bf Optional (default: Inactive)}\\
+    Used in {\it INVERSION} mode. It pre-calculates an initial temperature perturbation based on the average intensity of the first spectral region provided.
+    \item {\it PGAS} {\bf Optional (default: Inactive)}\\
+    Used in {\it INVERSION} mode. It pre-calculates an initial gas pressure perturbation so that $\lg\tau_{5}$ is formed inside the provided height range.
+    \item {\it BVEC} {\bf Optional (default: Inactive)}\\
+    Used in {\it INVERSION} mode. It pre-calculates an initial magnetic field vector perturbation based on the four Stokes spectra of the first spectral region provided (Only works if inverting the four Stokes parameters, otherwise ignored).
+    \item {\it VLOS} {\bf Optional (default: Inactive)}\\
+    Used in {\it INVERSION} mode. It pre-calculates an initial line-of-sight velocity component perturbation based on the Stokes I spectra of the first spectral region provided (Only works if Stokes I is inverted, otherwise ignored).
+    \item {\it FULL\_STOKES} {\bf Optional (default: Inactive)}\\
+    Used in {\it INVERSION} and {\it SYNTHESIS} mode. It stores (and writes down) the Stokes parameters for the whole three-dimensional volume considered. This option may considerably increase the memory requirement.
+    \item {\it SLDPATH} {\bf Optional (default: ./)}\\
+    \item {\it MODPATH} {\bf Optional (default: ./)}\\
+    \item {\it DATAPATH} {\bf Optional (default: ./)}\\
+    \item {\it OUTPATH} {\bf Optional (default: ./)}\\
+  \end{enumerate}
+  \item {\it END:}\\
+  It specifies the end of the input file that must be read by the code. Anything below is ignored.
+\end{itemize}
+%
+% Some input file examples:
+\subsection{Input file examples:}
+\input{um_execution_ex01.tex}
+%
+% Spectral lines database file:
+\subsection{Spectral lines database file:}
+\input{um_spectral_line_database.tex}
+%
+

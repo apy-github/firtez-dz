@@ -1,0 +1,24 @@
+LINES:
+4,5 500 -700.0 5.0
+FILEPROFILE:
+syn_profile.bin
+FILEMODEL:
+test_atmos.bin
+MODE:
+inversion
+HYDROSTATIC:
+yes
+STOKES SETUP:
+STKI
+STKQ
+STKU
+STKV
+INVERSION SETUP:
+TEM
+VLOS
+MISC SETUP:
+DATAPATH ../test_syn1/out_dir/
+MODPATH ../../default/
+SLDPATH ../../default/
+OUTPATH ./out_dir/
+END:

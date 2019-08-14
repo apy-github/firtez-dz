@@ -1,0 +1,10 @@
+FILEMODEL:
+test_atmos.bin
+MODE:
+tau
+HYDROSTATIC:
+yes
+MISC SETUP:
+MODPATH ../../default/
+SLDPATH ../../default/
+END:
