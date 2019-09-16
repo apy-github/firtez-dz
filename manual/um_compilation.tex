@@ -48,5 +48,11 @@ This would remove all the *.mod, *.o, and *.x files and then:\\
 After the latter, the code should compile successfully creating an executable file called: {\it firtez-dz.x}. By default, {\it gnu} fortran compiler is assumed, yet if you want to use intel's, then you compile the code typing:\\
 {\it make firtez COMP=intel}\\
 
+%
+%
+\subsection{Tests:}
+The standard distribution includes some tests to check the correct compilation of {\it firtez-dz}, and also, they are used in the python notebook ({\it firtez\_dz\_usage\_example.ipynb}) included in the {\it python} directory. Also, inside the directory of each test, it is possible to find the {\it control\_file.dat} that can help when looking through the {\it input file} in the next section (see Sect. \ref{sect:execution}). In order to run all the tests, move to the {\it tests} directory and execute the shell script {\it run\_tests.sh} by typing:\\
+
+./run\_tests.sh
 
 %
