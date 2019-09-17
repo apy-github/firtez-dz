@@ -295,7 +295,6 @@ ENDIF
           ENDIF
        CASE('STOKES SETUP:')
           CLOSE(1)
-          WRITE(*,*) 'STOKES SETUP: FOUND'
           CALL SET_STK_INVERSION(LINES_READ)
        CASE('INVERSION SETUP:')
           CLOSE(1)

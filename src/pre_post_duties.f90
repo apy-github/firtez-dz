@@ -419,10 +419,6 @@ PRINT*, '*********************************************************************'
         !
       ENDIF
       !
-! Timing 2:
-      CALL SYSTEM_CLOCK(COUNT=TSTART,COUNT_RATE=TRATE,COUNT_MAX=TMAX)
-      TIME1B=DBLE(TSTART)
-! End timing 2.
     ELSE
       !
       ! SLAVES:
@@ -454,6 +450,12 @@ PRINT*, '*********************************************************************'
     !  CALL SMOOTHING()
     !ENDIF
     !
+    IF (mpi__myrank.EQ.0) THEN
+! Timing 2:
+      CALL SYSTEM_CLOCK(COUNT=TSTART,COUNT_RATE=TRATE,COUNT_MAX=TMAX)
+      TIME1B=DBLE(TSTART)
+! End timing 2.
+    ENDIF
   END SUBROUTINE ALLOCATE_AND_READ
   !
   !------------------------------------------------
