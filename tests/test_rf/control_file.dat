@@ -1,0 +1,25 @@
+LINES:
+4,5 500 -700.0 5.0
+FILEPROFILE:
+syn_profile.bin
+FILEMODEL:
+rf_test_atmos.bin
+MODE:
+synthesis
+HYDROSTATIC:
+no
+STOKES SETUP:
+STKI
+STKQ
+STKU
+STKV
+WRITE RESPONSE FUNCTION:
+YES
+INVERSION SETUP:
+TEM
+BZ
+MISC SETUP:
+MODPATH ../../default/
+SLDPATH ../../default/
+OUTPATH ./out_dir/
+END:

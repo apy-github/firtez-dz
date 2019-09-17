@@ -6,7 +6,7 @@ These examples are provided in the {\it tests} directory together with the stand
 
 In the first one, we just re-calculate the gas pressure and density for a model atmosphere:
 
-\begin{ifbox}[label={tb:example01}]{{\it Example 1}}
+\begin{ifbox}[label={tb:example01}]{{\it Example 1: Get gas pressure and density in HE}}
   \scriptsize
 FILEMODEL:\\
 test\_atmos.bin\\
@@ -29,7 +29,7 @@ END:
 
 In this second example, we calculate the optical depth scale at 5000 {\AA} for the input model atmosphere used in the previous example, i.e. without the assumption of hydrostatic equilibrium.\\
 
-\begin{ifbox}[label={tb:example02}]{{\it Example 2}}
+\begin{ifbox}[label={tb:example02}]{{\it Example 2: Get optical depth}}
   \scriptsize
 FILEMODEL:\\
 test\_atmos.bin\\
@@ -52,7 +52,7 @@ END:
 
 Now, we combine the two previous cases calculating the optical depth scale of a model atmosphere whose gas pressure and density are previously calculated assuming hydrostatic equilibrium.
 
-\begin{ifbox}[label={tb:example03}]{{\it Example 3}}
+\begin{ifbox}[label={tb:example03}]{{\it Example 3: Get optical depth, HE}}
   \scriptsize
 FILEMODEL:\\
 test\_atmos.bin\\
@@ -75,7 +75,7 @@ END:
 
 Now we consider the case of synthesising some Stokes profiles. To do so, we are going to synthesis the full Stokes vector for the blended lines 6301.5 and 6302.5 {\AA}.
 
-\begin{ifbox}[label={tb:example04}]{{\it Example 4}}
+\begin{ifbox}[label={tb:example04}]{{\it Example 4: Synthesis}}
   \scriptsize
 LINES:\\
 4,5 500 -700.0 5.0\\
@@ -108,7 +108,7 @@ END:
 
 Now we proceed exactly on the same way, but assuming hydrostatic equilibrium.
 
-\begin{ifbox}[label={tb:example05}]{{\it Example 5}}
+\begin{ifbox}[label={tb:example05}]{{\it Example 5: Synthesis, HE}}
   \scriptsize
 LINES:\\
 4,5 500 -700.0 5.0\\
@@ -128,13 +128,15 @@ END:
   \normalsize
 \end{ifbox}
 
-Note here that we do not specify any Stokes parameter to be synthesis as by default all of them are calculated.
+Note here that we do not specify any Stokes parameter to be synthesis as by default all of them are calculated.\\
+
+In the following example \ref{tb:example06} we consider the inversion of all the Stokes profiles for the temperature and the LOS velocity:\\
 
 %
 % Example input file 6. ...
 % ... 
 
-\begin{ifbox}[label={tb:example06}]{{\it Example 6}}
+\begin{ifbox}[label={tb:example06}]{{\it Example 6: Inversion}}
   \scriptsize
 LINES:\\
 4,5 500 -700.0 5.0\\
@@ -163,17 +165,40 @@ END:
   \normalsize
 \end{ifbox}
 
-
+The result of the inversion is stores in two files. For the model, the output will be written in the {\it OUTPATH} directory with the same name as the input one preceded by the suffix: "out\_" (i.e. in this case, it would be written in "out\_dir\/" with the name: "out\_test\_atmos.bin"). Similarly, the synthetic profiles of the fitting, will be stored in the same directory ({\it OUTPATH}) and the name is the same as the input profiles with the additional "out\_" suffix (in this example: "out\_syn\_profile.bin").\\
 
 
 %
 % Example input file 7. ...
 % ... 
 
-%\begin{ifbox}[label={tb:example07}]{{\it Example 7}}
-%  \scriptsize
-%  \normalsize
-%\end{ifbox}
+In order to get the response functions, one has to set {\it MODE:} to {\it SYNTHESIS} and {\it WRITE RESPONSE FUNCTION:}
+to {\it YES}. Additionally, we have to include {\it INVERSION SETUP:} in order to tell the code to what physical parameter we want the response functions to. In the example below, we would get the response functions to temperature ({\it TEM}), to LOS velocity ({\it VLOS}), and to the $z$ component of the magnetic field vector ({\it BZ}).//
+
+\begin{ifbox}[label={tb:example07}]{{\it Example 7: Response functions}}
+  \scriptsize
+LINES:\\
+4,5 500 -700.0 5.0\\
+FILEPROFILE:\\
+syn\_profile.bin\\
+FILEMODEL:\\
+test\_atmos.bin\\
+MODE:\\
+synthesis\\
+WRITE RESPONSE FUNCTION:\\
+YES\\
+INVERSION SETUP:\\
+TEM\\
+VLOS\\
+BZ\\
+MISC SETUP:\\
+DATAPATH ../test\_syn1/out\_dir/\\
+MODPATH ../../default/\\
+SLDPATH ../../default/\\
+OUTPATH ./out\_dir/\\
+END:
+  \normalsize
+\end{ifbox}
 
 
 

@@ -26,7 +26,9 @@ MODULE MISC
   PUBLIC :: READ_PROFILE_3D
   PRIVATE :: WRITE_RFS3D_V1
   PRIVATE :: WRITE_RFS3D_V2
+  PRIVATE :: WRITE_RFS3D_V3
   PUBLIC :: WRITE_RFS
+  PUBLIC :: WRITE_RFS2
   PUBLIC :: READ_PSF_2D
   PUBLIC :: WRITE_BIN
   PRIVATE
@@ -1263,7 +1265,7 @@ MODULE MISC
     !
     WRITE(*,*) 'WRITING PROFILES IN FILE: ' // TRIM(FNAME)
     !
-    WRITE(*,*) 'I AM write_profiles, BUT I AM NOT IMPLEMENTED YET O_O'
+    !WRITE(*,*) 'I AM write_profiles, BUT I AM NOT IMPLEMENTED YET O_O'
     !
   END SUBROUTINE WRITE_PROFILES
   !
@@ -1725,7 +1727,7 @@ MODULE MISC
     ! FIRST RECORD:
     !             POSV, NEGV, ID, NRECS, NDIMS, SIZEDIM1, SIZEDIM2, SIZEDIM3, SIZEDIM4
     NTOT=11
-    CALL ALLOCATE_1D_SP(TOWRITE,NTOT,'WRITE_RFS3D_V1 ALLOCATION')
+    CALL ALLOCATE_1D_SP(TOWRITE,NTOT,'WRITE_RFS3D_V2 ALLOCATION')
     !
     TOWRITE(1)=REAL(SS+VV)
     TOWRITE(2)=REAL(SS-VV)
@@ -1833,6 +1835,175 @@ MODULE MISC
   !
   !------------------------------------------------
   !
+  SUBROUTINE WRITE_RFS3D_V3(FNAME,SZ,Z,LOGV,IND,WAVE,DSTOKES,SS,VV)
+
+    CHARACTER(*), INTENT(IN)                                               :: FNAME
+    INTEGER,DIMENSION(6),INTENT(IN)                                        :: SZ
+    !
+    REAL(DP),DIMENSION(SZ(4)),INTENT(IN)                                   :: Z
+    LOGICAL,DIMENSION(SZ(1)),INTENT(IN)                                    :: LOGV
+    REAL(DP), INTENT(IN), DIMENSION(SZ(3))                                 :: IND
+    REAL(DP), INTENT(IN), DIMENSION(SZ(3))                                 :: WAVE
+    REAL(SP), INTENT(IN), DIMENSION(SZ(1),SZ(2),SZ(3),SZ(4),SZ(5),SZ(6))   :: DSTOKES
+    !
+    INTEGER, INTENT(IN)                                                    :: SS, VV
+    !
+    REAL(SP), DIMENSION(:), ALLOCATABLE                                    :: TOWRITE
+    !
+    INTEGER                                  :: NTOT, I, J, NLOOP, NDER, NRECS
+    INTEGER                                  :: K,W,P,S,NPARTOSAV
+    REAL(SP),DIMENSION(SZ(1))                 :: LOGVSP
+    !
+    INTEGER(kind=8)                          :: LNTOT, LOFFSET, TO_BE_WRITTEN
+    REAL(SP), DIMENSION(:), ALLOCATABLE          :: TMP1D
+    REAL(SP), DIMENSION(:,:,:,:,:), ALLOCATABLE          :: TMP5D
+    REAL(SP), DIMENSION(:,:,:,:), ALLOCATABLE          :: TMP4D
+    !
+    INTEGER :: IERR
+    !
+    ! FIRST RECORD:
+    !             POSV, NEGV, ID, NRECS, NDIMS, SIZEDIM1, SIZEDIM2, SIZEDIM3, SIZEDIM4
+    NTOT=11
+    CALL ALLOCATE_1D_SP(TOWRITE,NTOT,'WRITE_RFS3D_V2 ALLOCATION')
+    !
+    TOWRITE(1)=REAL(SS+VV)
+    TOWRITE(2)=REAL(SS-VV)
+    TOWRITE(3)=18060904.E0
+    ! NUMBER OF RECORDS TO BE STORED:
+    LNTOT=1
+    !
+    ! Take into account that not all the parameters are necessarily calculated:
+    NPARTOSAV=0
+    LOGVSP(:)=0.0E0
+    DO P=1,SZ(1)
+      IF (LOGV(P).EQV..TRUE.) THEN
+        NPARTOSAV=NPARTOSAV+1
+        LOGVSP(P)=1.0E0
+      ENDIF
+    ENDDO
+    !
+    LNTOT=LNTOT*NPARTOSAV*SZ(2)*SZ(3)*SZ(4)*SZ(5)*SZ(6)
+    !
+    NRECS=INT(CEILING(REAL(LNTOT)/536870902.E0))
+    TOWRITE(4)=REAL(1+1+1+1+1+NRECS)         ! NRECS: HEADER, Z, IND, WAVE, LOGV + DATA
+    ! SUCH HUGE NUMBER OF RECORDS IS NEEDED BECAUSE EACH RECORD IS LIMITED TO 2GB OF SIZE
+    TOWRITE(5)=6.E0          ! NDIMS
+    TOWRITE(6)=REAL(SZ(6))   ! NX
+    TOWRITE(7)=REAL(SZ(5))   ! NY
+    TOWRITE(8)=REAL(SZ(4))   ! NZ
+    TOWRITE(9)=REAL(SZ(3))   ! NW
+    TOWRITE(10)=REAL(SZ(2))  ! N STOKES (4)
+    TOWRITE(11)=REAL(SZ(1))  ! ONLY: dS/dT_r, dS/dP_t, dS/dR_t, dS/dBx, dS/dBy, dS/dBz, dS/dVz, dS/dP0
+    !
+    NLOOP=4!TOWRITE(4)-1
+    NDER=INT(TOWRITE(11))
+    !
+    ! STORE PROFILES IN A 1D LARRAY
+    CALL ALLOCATE_L1D_SP(TMP1D,LNTOT,'READ_ALLOCATION TMP')
+    !
+    LOFFSET=1
+    !
+    DO I=1,SZ(6)
+      DO J=1,SZ(5)
+        DO K=1,SZ(4)
+          DO W=1,SZ(3)
+            DO S=1,SZ(2)
+              DO P=1,SZ(1)
+                IF (LOGV(P).EQV..TRUE.) THEN
+                  TMP1D(LOFFSET)=DSTOKES(P,S,W,K,J,I)
+                  LOFFSET=LOFFSET+1
+                ENDIF
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    !
+    OPEN(UNIT=1,FILE=FNAME,FORM="unformatted",IOSTAT=IERR)
+      IF (IERR.NE.0) THEN
+        PRINT*, '   ***   '
+        PRINT*, ' Error reading: '//TRIM(FNAME)
+        PRINT*, ' Error code: ', IERR
+        PRINT*, '   ___   '
+      ENDIF 
+      !FIRST ACCESS:
+      WRITE(1) TOWRITE
+      DEALLOCATE(TOWRITE)
+      !
+      ! SEQUENTIAL ACCESS TO WRITE EACH PARAMETER:
+      DO I=1,NLOOP
+        SELECT CASE (I)
+          CASE(1)
+            NTOT=INT(SZ(4))
+            ALLOCATE(TOWRITE(NTOT))
+            TOWRITE(:)=REAL(Z)
+          CASE(2)
+            NTOT=INT(SZ(3))
+            ALLOCATE(TOWRITE(NTOT))
+            TOWRITE(:)=REAL(IND)
+          CASE(3)
+            NTOT=INT(SZ(3))
+            ALLOCATE(TOWRITE(NTOT))
+            TOWRITE(:)=REAL(WAVE)
+          CASE(4)
+            NTOT=INT(SZ(1))
+            ALLOCATE(TOWRITE(NTOT))
+            TOWRITE(:)=REAL(LOGVSP)
+        ENDSELECT
+        WRITE(1) TOWRITE
+        DEALLOCATE(TOWRITE)
+      ENDDO
+      ! NOW, STORE THE RESPONSE FUNCTION ITSELF:
+      TO_BE_WRITTEN=LNTOT
+      LOFFSET=1
+      DO I=1,NRECS
+        LNTOT=1
+        IF (TO_BE_WRITTEN.GT.536870902) THEN
+          LNTOT=536870902
+        ELSE
+          LNTOT=TO_BE_WRITTEN
+        ENDIF
+        WRITE(1) TMP1D(LOFFSET:LOFFSET+LNTOT-1)
+        LOFFSET=LOFFSET+LNTOT
+        TO_BE_WRITTEN=TO_BE_WRITTEN-LNTOT
+      ENDDO
+    CLOSE(UNIT=1)
+    DEALLOCATE(TMP1D)
+!PRINT*, 'I AM DONE WITH WRITE_RFS3D_V2'
+    !
+  END SUBROUTINE WRITE_RFS3D_V3
+  !
+  !------------------------------------------------
+  !
+  SUBROUTINE WRITE_RFS2(FNAME,SZ,Z,LOGV,IND,WAVE,DSTOKES,SS,VV)
+    !
+    CHARACTER(*), INTENT(IN)                                            :: FNAME
+    INTEGER,DIMENSION(6),INTENT(IN)                                     :: SZ
+    !
+    REAL(DP),DIMENSION(SZ(4)),INTENT(IN)                                :: Z
+    REAL(DP),DIMENSION(SZ(3)),INTENT(IN)                                :: IND
+    LOGICAL,DIMENSION(SZ(1)),INTENT(IN)                                 :: LOGV
+    REAL(DP),DIMENSION(SZ(3)),INTENT(IN)                                :: WAVE
+    REAL(SP),DIMENSION(SZ(1),SZ(2),SZ(3),SZ(4),SZ(5),SZ(6)),INTENT(IN)  :: DSTOKES
+    !
+    INTEGER, INTENT(IN)                                                 :: SS, VV
+    !
+    IF (SS.EQ.3000) THEN
+      IF ((VV.EQ.1).OR.(VV.EQ.2)) THEN
+        PRINT*, 'I MUST NOT BE HERE! STOP'
+        STOP
+      ELSE IF (VV.EQ.3) THEN
+        CALL WRITE_RFS3D_V3(FNAME,SZ,Z,LOGV,IND,WAVE,DSTOKES,SS,VV)
+      ENDIF
+    ENDIF
+    !
+    WRITE(*,*) 'WRITING RESPONSE FUNCTIONS IN FILE: ' // TRIM(FNAME)
+    !
+  END SUBROUTINE WRITE_RFS2
+  !
+  !------------------------------------------------
+  !
   SUBROUTINE WRITE_RFS(FNAME,SZ,Z,IND,WAVE,DSTOKES,SS,VV)
     !
     CHARACTER(*), INTENT(IN)                                            :: FNAME
@@ -1851,14 +2022,14 @@ MODULE MISC
         PRINT*, 'I MUST NOT BE HERE! STOP'
         STOP
         CALL WRITE_RFS3D_V1(FNAME,SZ,Z,IND,WAVE,DSTOKES,SS,VV)
-      ELSE IF (VV.EQ.2) THEN
+      ELSE IF ((VV.EQ.2).OR.(VV.EQ.3)) THEN
         CALL WRITE_RFS3D_V2(FNAME,SZ,Z,IND,WAVE,DSTOKES,SS,VV)
       ENDIF
     ENDIF
     !
     WRITE(*,*) 'WRITING RESPONSE FUNCTIONS IN FILE: ' // TRIM(FNAME)
     !
-    WRITE(*,*) 'I AM write_rfs, BUT I AM NOT IMPLEMENTED YET O_O'
+    !WRITE(*,*) 'I AM write_rfs, BUT I AM NOT IMPLEMENTED YET O_O'
     !
   END SUBROUTINE WRITE_RFS
   !

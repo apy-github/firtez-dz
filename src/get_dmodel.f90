@@ -1011,19 +1011,21 @@ ENDIF
     !MPERT=50.D0*DEXP(DLOG(1.0D1/5.0D1)*(DBLE(CURIC)/DBLE(MAXITER)))*1.D-2
     MPERT=0.5D0
     SVDTOL=4
-    IF (CURIC.EQ.1) THEN
+    !
+    IF (CURIC.EQ.0) THEN
+      NJEVALS=NZ
+    ELSE IF (CURIC.EQ.1) THEN
       NJEVALS=1
     ELSE IF (CURIC.EQ.MAXITER) THEN
       NJEVALS=NZ
     ELSE
       NJEVALS=INT(CYCPOW**(CURIC-1))
-!
-!
-IF (mpi__myrank.EQ.1) PRINT*, 'NJEVALS, CURIC, MAXITER, CYCPOW: ', NJEVALS, CURIC, MAXITER, CYCPOW
-IF (NJEVALS.GT.NZ) NJEVALS=NZ
-!
+      !
+      !
+      !IF (mpi__myrank.EQ.1) PRINT*, 'NJEVALS, CURIC, MAXITER, CYCPOW: ', NJEVALS, CURIC, MAXITER, CYCPOW
+      IF (NJEVALS.GT.NZ) NJEVALS=NZ
+      !
     ENDIF
-IF (mpi__myrank.EQ.1) PRINT*, 'NJEVALS: ', NJEVALS
     !
     IFREEP=OFFSET
     CNT_FREEV=1
@@ -1031,31 +1033,34 @@ IF (mpi__myrank.EQ.1) PRINT*, 'NJEVALS: ', NJEVALS
       !
       ! Warning, testing the possibility of having T with more...
       ! ...freedom from the beginning than the others.
-
       IF (I.EQ.1) THEN
-IF (mpi__myrank.EQ.1) PRINT*, 'I am ', I, ' in cycle: ', CURIC, ' and I am using ', NJEVALS, ' perturbation'
+!IF (mpi__myrank.EQ.1) PRINT*, 'I am ', I, ' in cycle: ', CURIC, ' and I am using ', NJEVALS, ' perturbation'
         CALL UPDATE_COEFS(I,INV_ATMPAR(I),NSLB_MAX(I),NJEVALS,NZ &
             ,INSLABS)
       ELSE
-        IF (CURIC.GT.TOFFSET) THEN
+        IF (CURIC.EQ.0) THEN
+          CALL UPDATE_COEFS(I,INV_ATMPAR(I),NSLB_MAX(I) &
+               ,NZ,NZ,INSLABS)
+        ELSE IF (CURIC.GT.TOFFSET) THEN
           CALL UPDATE_COEFS(I,INV_ATMPAR(I),NSLB_MAX(I) &
                ,INT(CYCPOW**(CURIC-TOFFSET-1)),NZ &
               ,INSLABS)
         ELSE
-IF (mpi__myrank.EQ.1) PRINT*, 'I am ', I, ' in cycle: ', CURIC &
-    , ' and I am using just 1 perturbation to allow T more freedom' &
-    , TOFFSET
+!IF (mpi__myrank.EQ.1) PRINT*, 'I am ', I, ' in cycle: ', CURIC &
+    !, ' and I am using just 1 perturbation to allow T more freedom' &
+    !, TOFFSET, 'I,INV_ATMPAR(I),NSLB_MAX(I)', I,INV_ATMPAR(I),NSLB_MAX(I)
           CALL UPDATE_COEFS(I,INV_ATMPAR(I),NSLB_MAX(I),1,NZ &
               ,INSLABS)
         ENDIF
       ENDIF
+!PRINT*, 'I,INV_ATMPAR(I)', I,INV_ATMPAR(I)
 ! Warning end.
-      IF(INV_ATMPAR(I)) THEN
+      IF(INV_ATMPAR(I).EQV..TRUE.) THEN
         NSLAB_PER_FREEV(CNT_FREEV)=INSLABS
         CNT_FREEV=CNT_FREEV+1
       ENDIF
     ENDDO
-IF (mpi__myrank.EQ.1) PRINT*, NSLAB_PER_FREEV
+!IF (mpi__myrank.EQ.1) PRINT*, NSLAB_PER_FREEV
     !
   END SUBROUTINE IFREE_VAR_SPACE
   !
@@ -1185,6 +1190,7 @@ IF (mpi__myrank.EQ.1) PRINT*, NSLAB_PER_FREEV
 !    PRINT*, '**UPDATE_COEFS**'
     STEP=0.D0
     !
+!PRINT*, 'ATMIND, LOGIC', ATMIND, LOGIC
     IF (LOGIC.EQV..TRUE.) THEN
       INJEVALS=MIN(INJ,VMAX)
       STEP=DBLE(INZ)/DBLE(INJEVALS)

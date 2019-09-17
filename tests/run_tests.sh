@@ -1,4 +1,4 @@
-#/usr/bin/env bash
+#!/usr/bin/env bash
 #
 files=`ls -d ./test_* | grep -v 'inv'`
 #

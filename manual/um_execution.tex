@@ -192,6 +192,7 @@ The following list covers ALL the fields the code works with, anything outside i
   \ldots
   \normalsize
 \end{ifbox}
+And in addition, one can specify in {\it INVERSION SETUP:} for what physical parameters response functions must be calculated. For an example on how to use this field have a look at \ref{tb:example07}
   \item {\it LINE SPREAD FUNCTION:} {\bf Optional (default: inactive)}\\
   This field is optional and has effect only in {\it SYNTHESIS} and {\it INVERSION} mode. It specifies the gaussian function to use to simulate the effect of the instrumental transmission function. It has to be specified for each of the spectral ranges considered. The format to provide this input parameter is:\\
   ss  ww,\\
@@ -226,9 +227,13 @@ The following list covers ALL the fields the code works with, anything outside i
     \item {\it FULL\_STOKES} {\bf Optional (default: Inactive)}\\
     Used in {\it INVERSION} and {\it SYNTHESIS} mode. It stores (and writes down) the Stokes parameters for the whole three-dimensional volume considered. This option may considerably increase the memory requirement.
     \item {\it SLDPATH} {\bf Optional (default: ./)}\\
+    It specifies the directory where the file with the spectral line data is.
     \item {\it MODPATH} {\bf Optional (default: ./)}\\
+    It specifies the directory where the file with the model atmosphere is.
     \item {\it DATAPATH} {\bf Optional (default: ./)}\\
+    It specifies the directory where the file with the stokes spectra is (only useful in inversion mode).
     \item {\it OUTPATH} {\bf Optional (default: ./)}\\
+    It specifies the directory where the output data will be written, all of it, i.e. the model atmosphere, the synthetic profiles, the response functions (if required).
   \end{enumerate}
   \item {\it END:}\\
   It specifies the end of the input file that must be read by the code. Anything below is ignored.
@@ -238,6 +243,7 @@ The following list covers ALL the fields the code works with, anything outside i
 \subsection{Input file examples:}
 \input{um_execution_ex01.tex}
 %
+Now that we have covered the input file, let us have a look at the spectral lines database file.\\
 % Spectral lines database file:
 \subsection{Spectral lines database file:}
 \input{um_spectral_line_database.tex}

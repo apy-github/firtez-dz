@@ -189,7 +189,7 @@ PRINT*, '*********************************************************************'
               OFF=OFF+NUMW
             ENDIF
           ENDDO
-          CALL WRITE_PROFILES(TRIM(OUTPPATH)//'fr_pro_'//TRIM(NAMEPROFILE), SHAPE(SYN)&
+          CALL WRITE_PROFILES(TRIM(OUTPPATH)//'out_'//TRIM(NAMEPROFILE), SHAPE(SYN)&
               , INDEX, WAVE, SYN, 3000, 3)
           DEALLOCATE(SYN)
 
@@ -218,7 +218,7 @@ PRINT*, '*********************************************************************'
               ENDIF
             ENDDO
 
-            CALL WRITE_PROFILES(TRIM(OUTPPATH)//'fr_cpro_'//TRIM(NAMEPROFILE) &
+            CALL WRITE_PROFILES(TRIM(OUTPPATH)//'cout_'//TRIM(NAMEPROFILE) &
                 , SHAPE(SYN), INDEX, WAVE, SYN, 3000, 3)
             DEALLOCATE(SYN)
 
@@ -242,7 +242,7 @@ PRINT*, '*********************************************************************'
           !
           ! Check whether we are asked to save FULL_STOKES, and act accordingly:
           IF (FULL_STOKES.EQV..TRUE.) THEN
-            CALL WRITE_BIN(TRIM(OUTPPATH)//'full_stokes_'//TRIM(NAMEPROFILE) &
+            CALL WRITE_BIN(TRIM(OUTPPATH)//'fs_'//TRIM(NAMEPROFILE) &
                 , SIZE(SHAPE(SYN5D)) &
                 , SHAPE(SYN5D), SIZE(SYN5D,KIND=8), SYN5D, 3000, 3)
           ENDIF ! FULL_STOKES
@@ -292,7 +292,7 @@ PRINT*, '*********************************************************************'
   SUBROUTINE WRITE_RESPONSE_FUNCTIONS()
     !
     USE user_mpi, ONLY: mpi__myrank
-    USE MISC, ONLY: WRITE_RFS
+    USE MISC, ONLY: WRITE_RFS, WRITE_RFS2
     USE ALLOCATE_UTILS, ONLY: ALLOCATE_6D_SP
     USE PHYS_PARAM, ONLY: WDSYN, DSYN
     USE CODE_MODES, ONLY: SAVE_RFS, NAMEMODEL, OUTPPATH
@@ -321,8 +321,10 @@ PRINT*, '*********************************************************************'
             OFF=OFF+NUMW
           ENDIF
         ENDDO
-        CALL WRITE_RFS(TRIM(OUTPPATH)//'rfout_'//TRIM(NAMEMODEL)&
-            ,SHAPE(WDSYN),ZZ,INDEX,WAVE,WDSYN,3000,3)
+        CALL WRITE_RFS2(TRIM(OUTPPATH)//'rfout_'//TRIM(NAMEMODEL)&
+            ,SHAPE(WDSYN),ZZ,INV_ATMPAR,INDEX,WAVE,WDSYN,3000,3)
+        !CALL WRITE_RFS(TRIM(OUTPPATH)//'rfout_'//TRIM(NAMEMODEL)&
+        !    ,SHAPE(WDSYN),ZZ,INDEX,WAVE,WDSYN,3000,3)
         DEALLOCATE(WDSYN)
       ENDIF ! Save_rfs
       !
@@ -862,7 +864,7 @@ TOFFSET=0
 !><      IF (INV_ATMPAR(7).EQV..TRUE.) CALC_RFSP(7)=1
 !><      IF (INV_ATMPAR(8).EQV..TRUE.) CALC_RFSP(8)=1
 !><      IF (SAVE_RFS.EQV..TRUE.) CALC_RFSP(:)=CALC_RFSP(:)*0+1
-      IF (SAVE_RFS.EQV..TRUE.) INV_ATMPAR(:)=.TRUE.
+!><      IF (SAVE_RFS.EQV..TRUE.) INV_ATMPAR(:)=.TRUE.
       !
       CALL LSF_INIT()
     ENDIF ! Slave
