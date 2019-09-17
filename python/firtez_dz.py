@@ -2277,7 +2277,7 @@ class stk_rf3D(object):
     return
 
 #
-def read_rf3D(fname, itx=-1, fmt_type=np.float32):
+def read_rf(fname, itx=-1, fmt_type=np.float32):
 
   def read_rf3D_v3(ofile, nrec, dims, fmt_type):
   
