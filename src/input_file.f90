@@ -166,6 +166,7 @@ ENDIF
     MRESPFUNCT = .FALSE.
     SAVE_RFS = .FALSE.
     MLSF=.FALSE.
+    MVERBOSE=0
     !-----------------------------
     INV_ATMPAR(:) = .FALSE.
     !-----------------------------
@@ -320,6 +321,7 @@ ENDIF
           LINES_READ = LINES_READ+1
           IF ((CHARREAD.EQ.'y').OR.(CHARREAD.EQ.'Y')) THEN
             SAVE_RFS = .TRUE.
+            MRESPFUNCT = .TRUE.
           ENDIF
        CASE('LINE SPREAD FUNCTION:')
           CLOSE(1)
@@ -334,9 +336,6 @@ ENDIF
           CLOSE(1)
        ENDSELECT
     ENDDO
-    !
-    IF (SAVE_RFS.EQV..TRUE.) MRESPFUNCT = .TRUE.
-    !
     !
     IF (FILEMODEL.EQV..FALSE.) THEN
 IF (mpi__myrank.EQ.0) THEN
@@ -1727,7 +1726,8 @@ ENDIF
     USE INVERT_PARAM, ONLY: ASSIST_T, ASSIST_P, ASSIST_B, ASSIST_V &
         , RSVDTOL, RSIGMAP
     USE FORWARD_PARAM, ONLY: FULL_STOKES
-    USE CODE_MODES, ONLY: INPUTFILE, DATAPATH, OUTPPATH, LINEPATH, MODLPATH
+    USE CODE_MODES, ONLY: INPUTFILE, DATAPATH, OUTPPATH, LINEPATH &
+        , MODLPATH, MVERBOSE
     !
     INTEGER, INTENT(INOUT)           :: LINES_READ
     INTEGER                          :: NUM_LINES_OBS
@@ -1787,6 +1787,7 @@ ENDIF
     LINES_READ=LINES_READ+NUM_LINES_OBS
     !
     IF (mpi__myrank.EQ.0) THEN
+IF (MVERBOSE.GT.0) THEN
       PRINT*, 'Assist T: ', ASSIST_T
       PRINT*, 'Assist P: ', ASSIST_P
       PRINT*, 'Assist B: ', ASSIST_B
@@ -1795,6 +1796,7 @@ ENDIF
       PRINT*, 'MODPATH: ', TRIM(MODLPATH)
       PRINT*, 'OUTPATH: ', TRIM(OUTPPATH)
       PRINT*, 'SLDPATH: ', TRIM(LINEPATH)
+ENDIF
     ENDIF
     !
     ! Check SVDTOL and NOISE ARE PROPERLY SUPPLIED:
