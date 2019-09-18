@@ -167,6 +167,7 @@ ENDIF
     SAVE_RFS = .FALSE.
     MLSF=.FALSE.
     MVERBOSE=0
+    MTAULIN=.FALSE.
     !-----------------------------
     INV_ATMPAR(:) = .FALSE.
     !-----------------------------
@@ -321,6 +322,14 @@ ENDIF
           IF ((CHARREAD.EQ.'y').OR.(CHARREAD.EQ.'Y')) THEN
             SAVE_RFS = .TRUE.
             MRESPFUNCT = .TRUE.
+          ENDIF
+       CASE('LINE OPTICAL DEPTH:')
+          READ(UNIT=1, FMT='(A)',IOSTAT=IERR) LINE
+          CHARREAD=TRIM(LINE)
+          CLOSE(1)
+          LINES_READ = LINES_READ+1
+          IF ((CHARREAD.EQ.'y').OR.(CHARREAD.EQ.'Y')) THEN
+            MTAULIN = .TRUE.
           ENDIF
        CASE('LINE SPREAD FUNCTION:')
           CLOSE(1)

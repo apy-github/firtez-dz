@@ -2351,4 +2351,115 @@ def read_rf(fname, itx=-1, fmt_type=np.float32):
   f.close()
 
   return rf3D
+#
+
+class logtaus(object):
+
+  def __init__(self, nx, ny, nz, nw):
+
+    self.nx = nx * 1
+    self.ny = ny * 1
+    self.nz = nz * 1
+    self.nw = nw * 1
+
+    self.z = np.zeros(self.nz)
+    self.indx = np.zeros(self.nw)
+    self.wave = np.zeros(self.nw)
+
+    self.ltau = np.zeros((nx, ny, nz, nw))
+
+    return
+
+  def set_z(self,array):
+    self.z = self.z * 0. + array * 1.
+    return
+
+  def set_indx(self,array):
+    self.indx = self.indx * 0. + array * 1.
+    return
+
+  def set_wave(self,array):
+    self.wave = self.wave * 0. + array * 1.
+    return
+
+  def set_ltau(self,array):
+    self.ltau = self.ltau * 0. + array * 1.
+    return
+
+def read_logtaus(fname, fmt_type=np.float32):
+
+  def read_ltau_v3(ofile, nrec, dims, fmt_type):
+  
+    nx, ny, nz, nw = np.int64(dims)
+    #from pdb import set_trace as stop
+    #stop()
+  
+    # WE ONLY READ A SINGLE X POSITION, OTHERWISE WE CAN...
+    # ...RUN OUT OF MEMORY
+    ltaus = logtaus(nx, ny, nz, nw)
+  
+    # IN ORDER TO READ IT, WE KNOW THAT:
+    #    1st RECORD: Z
+    #    2nd RECORD: INDX
+    #    3rd RECORD: WAVE
+  
+    for it_nnn in range(3):
+      tmp = ofile.read_record(dtype=fmt_type)
+      if (it_nnn == 0):
+        ltaus.set_z(tmp)
+      if (it_nnn == 1):
+        ltaus.set_indx(tmp)
+      if (it_nnn == 2):
+        ltaus.set_wave(tmp)
+    #
+    #    N   RECORDS: RFS GROUPED BY y, z, w, stokes, pars
+    ntotdims = np.int64(nx*ny*nz*nw)
+
+    #to_store = np.zeros(ntotdims, dtype=np.float32)
+    ltaus.ltau = ltaus.ltau.reshape(ntotdims)
+    offset=0
+    for it_nnn in range(np.int64(nrec)-4):
+      print(it_nnn)
+      tmp = ofile.read_record(dtype=fmt_type)
+      ltaus.ltau[offset:offset+tmp.size] = tmp*1.
+      offset=offset+tmp.size
+  
+    #ltaus.set_ltau(to_store.reshape(nx,ny,nz,nw))
+    ltaus.ltau = ltaus.ltau.reshape(nx,ny,nz,nw)
+    #del(to_store)
+  
+    return ltaus
+
+  f = FortranFile(fname, 'r')
+  first_rec = f.read_record(dtype=fmt_type)
+
+  posv = first_rec[0]
+  negv = first_rec[1]
+  fid = first_rec[2]
+  nrec = first_rec[3]
+  ndims = first_rec[4]
+
+  medv = (posv + negv) / 2.
+  verp = posv - medv
+  vern = negv - medv
+  vers = (posv - negv) / 2.
+
+  if ( (np.abs(medv-3000.) > 1.e-3) | (np.abs(fid-12200904.) > 1.e-3) ):
+    print('Something is wrong with the file %s' % fname)
+    print('\tIs it a line optical depth file?')
+    f.close()
+    return np.nan
+
+  if (np.abs(vers-3.) < 1.e-3):
+    #VERSION 3
+    ltaus = read_ltau_v3(f,nrec,first_rec[5:], fmt_type)
+  else:
+    print('The version of this RF file is not compatible with this...')
+    print('... library version!')
+    f.close()
+    return np.nan
+
+  f.close()
+
+  return ltaus
 

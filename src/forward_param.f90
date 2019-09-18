@@ -20,6 +20,8 @@ MODULE FORWARD_PARAM
   REAL(DP), PUBLIC, ALLOCATABLE                 :: WAVE(:), DELTA_LAMBDA(:), WAVE_INI(:)
   REAL(DP), PUBLIC, ALLOCATABLE                 :: INDEX(:)
   REAL(DP), PUBLIC, ALLOCATABLE                 :: KC5(:), KC(:), KLIN(:,:)
+  REAL(DP), PUBLIC, ALLOCATABLE                 :: KLINTAU(:,:)
+  REAL(SP), PUBLIC, ALLOCATABLE                 :: TAULIN(:,:)
   !
   REAL(SP), PUBLIC, ALLOCATABLE                 :: GAIN1D(:,:)
   ! TEM, PG, RHO, PEL, MW, BX, BY. BZ, VX, VY, VZ, TAU5

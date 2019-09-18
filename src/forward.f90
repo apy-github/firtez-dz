@@ -41,10 +41,11 @@ MODULE FORWARD
     !
     USE GRID_PARAM, ONLY: NX, NY, NZ
     USE PHYS_PARAM, ONLY: MODEL1D_SND, SYN3D, DSYN, SYN5D &
-        , MODEL1D_RCV, RSYN1D, EQVDSYN, FS_SYN1D
+        , MODEL1D_RCV, RSYN1D, EQVDSYN, FS_SYN1D, TAU3DLIN
     USE INVERT_PARAM, ONLY: NFREQ, AM_I_DONE, IFREEP
-    USE FORWARD_PARAM, ONLY: ATM_ARGS, N_FWD_MODELLING, FULL_STOKES, NUMW
-    USE CODE_MODES, ONLY: MINVERSION, MRESPFUNCT, MSYNTHESIS
+    USE FORWARD_PARAM, ONLY: ATM_ARGS, N_FWD_MODELLING, FULL_STOKES, NUMW &
+        , TAULIN
+    USE CODE_MODES, ONLY: MINVERSION, MRESPFUNCT, MSYNTHESIS, MTAULIN
     !
     INTEGER              :: I, J, L, M, RJ,RI, max_work
     INTEGER              :: IT_INDX
@@ -142,6 +143,11 @@ MODULE FORWARD
                   ,MPI_COMM_WORLD,mpi__status,mpi__ierror)
             ENDIF ! Full Stokes.
             !
+            IF (MTAULIN.EQV..TRUE.) THEN
+              CALL MPI_RECV(TAU3DLIN(:,:,J-1,I),NUMW*NZ,MPI_REAL,M+1,6 &
+                  ,MPI_COMM_WORLD,mpi__status,mpi__ierror)
+            ENDIF
+            !
             CALL SPLIT_MODEL3D(I,J-1)
             !
             !
@@ -191,6 +197,10 @@ MODULE FORWARD
                   ,MPI_COMM_WORLD,mpi__ierror)
             ENDIF ! Full Stokes.
             !
+            IF (MTAULIN.EQV..TRUE.) THEN
+              CALL MPI_SEND(TAULIN(:,:),NUMW*NZ,MPI_REAL,0,6 &
+                  ,MPI_COMM_WORLD,mpi__ierror)
+            ENDIF
             !
           ENDIF
           !
@@ -504,7 +514,7 @@ PRINT*, 'A', SUM(ABS(SYN3D)), SUM(ABS(BEST_SYN)), 'A'
     USE LINE_OPACITY, ONLY: OPAC_LINE
     USE CONT_OPACITY, ONLY: OPAC_CONTINUUM
     USE DAMPING, ONLY: GET_DAMPING
-    USE ABSORPTION_MATRIX, ONLY: GET_ABS_MAT
+    USE ABSORPTION_MATRIX, ONLY: GET_ABS_MAT, ETAI
     USE ATM_PARAM
     USE PHYS_PARAM
     USE HYDROSTATIC_TOOLS, ONLY: RK4_INTEGRATION_LOG &
@@ -584,6 +594,9 @@ PRINT*, 'A', SUM(ABS(SYN3D)), SUM(ABS(BEST_SYN)), 'A'
            ENDDO
            ! FOR EVERY WAVELENGTH
            DO L=1,NUMW
+              IF (MTAULIN.EQV..TRUE.) THEN
+                KLINTAU(L,K)=ETAI(L)/NHYD*(1.0D0/MAMU)/MW(K)
+              ENDIF
               !
               IF (K.EQ.1) THEN
                  CALL SET_BOUNDARY(K,L)
@@ -634,6 +647,15 @@ PRINT*, 'A', SUM(ABS(SYN3D)), SUM(ABS(BEST_SYN)), 'A'
       ENDDO
       TAU5(:)=LOG10(TAU5(:))
       !
+      IF (MTAULIN.EQV..TRUE.) THEN
+        TAULIN(:,NZ)=1E-9
+        DO K=NZ-1,1,-1
+           TAULIN(:,K)=TAULIN(:,K+1)&
+               + (((REAL(KLINTAU(:,K))*RHO(K)+REAL(KLINTAU(:,K+1))*RHO(K+1))/2.E0)&
+               * ((ZZ(K+1)-ZZ(K))*1000.E0*100.E0))
+        ENDDO
+        TAULIN(:,:)=LOG10(TAULIN(:,:))
+      ENDIF
       !
     ENDIF
     !
