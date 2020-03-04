@@ -192,6 +192,9 @@ class stk_profile3D(object):
 
     return
 
+  def write(self, fname, vv=3, fmt_type=np.float32):
+    self.write_profile(fname, vv=vv, fmt_type=fmt_type)
+
   def write_profile(self, fname, vv=3, fmt_type=np.float32):
 
     def set_to_write(obj,v=None):
@@ -322,6 +325,8 @@ class stk_profile3D(object):
       print("axis='p' or axis='w'")
       return
 
+    pl.figure(fnum)
+    pl.clf()
     fg,ax=pl.subplots(ncols=2,nrows=2,num=fnum,sharex=True, **fkwargs)
     for it_nnn in range(len(itx)):
       ax[0,0].plot(xtoplot, self.stki[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
@@ -378,6 +383,15 @@ class stk_profile3D(object):
 
     toshow = np.zeros((len(waves), len(pars), self.nx, self.ny))
 
+ #   ylabels = []
+ #   for itw in len(waves):
+ #     if (axis=""):
+ #       seedy = ""
+ #     else:
+ #       seedy = ""
+ #   ylabel[itn])
+
+
     for itnh, ith in enumerate(waves):
       if ( (ith<0) | ((ith+1)>self.nw)):
         print('\tOut of wavelength range: %i out of [%i-%i]' % (ith, 0, self.nw-1))
@@ -413,7 +427,8 @@ class stk_profile3D(object):
       for itn in range(nts):
         its = ts[itn,:,:]
         im = axc[itn].imshow(its.T*factor, vmin=vmin[itn], vmax=vmax[itn], cmap=ccmap)
-        axc[itn].invert_yaxis()
+        if (axc[itn].yaxis_inverted()):
+          axc[itn].invert_yaxis()
         cbar = pl.colorbar(im, ax=axc[itn], fraction=0.1, shrink=0.9, aspect=30)
         # Following: https://stackoverflow.com/questions/22012096/how-to-set-number-of-ticks-in-plt-colorbar
         tick_locator = ticker.MaxNLocator(nbins=5, min_n_ticks=3)
@@ -447,7 +462,7 @@ class stk_profile3D(object):
     #
     pl.close(fignum)
     fg, ax = pl.subplots(ncols=len(pars),nrows=len(waves), num=fignum \
-        , squeeze=False, **fkwargs)
+        , squeeze=False, sharex=True, sharey=True, **fkwargs)
 
     itnorm=1
     if (self.stki.mean()<5.):
@@ -466,7 +481,7 @@ class stk_profile3D(object):
           ax[itn,itnp].yaxis.set_ticklabels([])
       if (itnp==0):
         for itn in range(len(waves)):
-          ax[itn,itnp].set_ylabel('y [px]')
+          ax[itn,itnp].set_ylabel('y [px]')#\n%s' ylabel[itn])
       # X:
       if (len(waves)>1):
         for itn in range(len(waves)-1):
@@ -485,6 +500,63 @@ class stk_profile3D(object):
     #
     # TV end.
     #
+
+  def trim_profiles(self, trim_dims):
+
+    if (len(trim_dims)!=3):
+      print(' ')
+      print(' You must supply values for the three dimensions')
+      print(' ')
+      return
+
+    new_dims = []
+    new_tdims = []
+    selfs = [self.nw, self.nx, self.ny]
+    for it in range(3):
+      if (len(trim_dims[it])!=2):
+        print(' ')
+        print(' You must supply the first and last pixel for each direction')
+        print(' ')
+        return
+      it_dim = []
+
+      if (trim_dims[it][0]<0):
+        it_dim.append(selfs[it]+trim_dims[it][0])
+      else:
+        it_dim.append(trim_dims[it][0])
+      if (trim_dims[it][1]<0):
+        it_dim.append(selfs[it]+trim_dims[it][1]+1)
+      else:
+        it_dim.append(trim_dims[it][1])
+
+      if (it_dim[0]>it_dim[1]):
+        print(' ')
+        print(' Lower limit above upper limit!')
+        print(' ')
+        return
+      if ( (it_dim[0]<0) | (it_dim[1]>selfs[it]) ):
+        print(' ')
+        print(' Out of boundaries!')
+        print(' ')
+        return
+      new_dims.append(it_dim)
+      new_tdims.append(it_dim[1]-it_dim[0])
+
+    new_profiles = stk_profile3D(*tuple(new_tdims))
+    pars = ['stki', 'stkq', 'stku', 'stkv']
+    for itn, itp in enumerate(pars):
+      dum = getattr(self, itp)
+      ndum = dum[new_dims[0][0]:new_dims[0][1],new_dims[1][0]:new_dims[1][1],new_dims[2][0]:new_dims[2][1]]
+      setattr(new_profiles, itp, ndum)
+    pars = ['wave', 'indx']
+    for itn, itp in enumerate(pars):
+      dum = getattr(self, itp)
+      ndum = dum[new_dims[0][0]:new_dims[0][1]]
+      setattr(new_profiles, itp, ndum)
+
+
+    return new_profiles
+
   #
   # stk_profile3D class end.
   #
@@ -562,7 +634,8 @@ def compare_tv(stokes, pars, waves, fignum=1\
     for itn in range(nts):
       its = ts[itn,:,:]
       im = axc[itn].imshow(its.T*factor, vmin=vmin[itn], vmax=vmax[itn], cmap=ccmap)
-      axc[itn].invert_yaxis()
+      if (axc[itn].yaxis_inverted()):
+        axc[itn].invert_yaxis()
       cbar = pl.colorbar(im, ax=axc[itn], fraction=0.1, shrink=0.9, aspect=30)
       # Following: https://stackoverflow.com/questions/22012096/how-to-set-number-of-ticks-in-plt-colorbar
       tick_locator = ticker.MaxNLocator(nbins=5, min_n_ticks=3)
@@ -635,6 +708,7 @@ def compare_tv(stokes, pars, waves, fignum=1\
   # compare TV end.
   #
 
+
 def plot_profiles(profiles,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
     , rangex=[], pkwargs={} \
     , pargs=(), pkargs={}, fkwargs={}):
@@ -679,6 +753,8 @@ def plot_profiles(profiles,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
   # Plot itself:
   #
 
+  pl.figure(fnum)
+  pl.clf()
   fg,ax=pl.subplots(ncols=2,nrows=2,num=fnum,sharex=True, **fkwargs)
   lrangex=1.e99
   urangex=-1.e99
@@ -743,6 +819,7 @@ def plot_profiles(profiles,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
   if (show_labels):
     ax[1,1].legend(shadow=True, fancybox=True \
         , ncol=np.int(np.round(np.sqrt(len(profiles)))))
+  pl.draw()
 #, bbox_to_anchor=(0.5,-1.) \
 
   return
@@ -755,9 +832,11 @@ def plot_profiles(profiles,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
 # Model:
 ################################################################################
 
-def read_model(fname, fmt_type=np.float32):
+def read_model(fname, fmt_type=np.float32, devel=False):
 
-  def read_model3D_v3(ofile, nrec, dims, fmt_type, verbose=False):
+##
+## Develpoing:
+  def dev_read_model3D_v3(ofile, nrec, dims, fmt_type, verbose=False):
   
     npar, nx, ny, nz = np.int64(dims)
   
@@ -766,19 +845,112 @@ def read_model(fname, fmt_type=np.float32):
       print('\tIs it a 3D model file?')
       return np.nan
   
+    #from pdb import set_trace as stop
+    model3D = atm_model3D(nx, ny, nz)
+
+    ipar = 0
+    loop = False
+    soff = 0
+    roff = 0
+
+    ntot = np.int((1.*nx)*ny*nz)
+    while (ipar<npar):
+
+      if (loop==True):
+        roff = rlast_acc
+        soff = 0
+      else:
+        soff = soff%ntot
+        roff=0
+
+      to_store = np.zeros(ntot, dtype=np.float32)
+      while (soff<ntot):
+        #print("\t", ipar, soff, ntot)
+
+        if (loop==False):
+          tmp = ofile.read_record(dtype=fmt_type)
+
+        rlast_acc = np.min([tmp.size, ntot-soff])
+        ssize = rlast_acc - roff
+        last_acc = soff + ssize
+
+        loop=False
+        if (rlast_acc!=tmp.size):
+          loop=True
+
+        #print("\t", soff, last_acc, ntot)
+        #print("\t\t", roff, rlast_acc, tmp.size)
+        #stop()
+
+        to_store[soff:last_acc] = tmp[roff:rlast_acc]*1.
+
+        soff = last_acc * 1
+        roff = rlast_acc % tmp.size
+
+      #print(soff, ntot, loop, last_acc, ipar)
+
+      #stop()
+
+      if (ipar==0):
+        model3D.set_tem(to_store.reshape(nx,ny,nz))
+      elif (ipar==1):
+        model3D.set_pg(to_store.reshape(nx,ny,nz))
+      elif (ipar==2):
+        model3D.set_rho(to_store.reshape(nx,ny,nz))
+      elif (ipar==3):
+        model3D.set_bx(to_store.reshape(nx,ny,nz))
+      elif (ipar==4):
+        model3D.set_by(to_store.reshape(nx,ny,nz))
+      elif (ipar==5):
+        model3D.set_bz(to_store.reshape(nx,ny,nz))
+      elif (ipar==6):
+        model3D.set_vz(to_store.reshape(nx,ny,nz))
+      elif (ipar==9):
+        model3D.set_tau(to_store.reshape(nx,ny,nz))
+      elif ((model3D.full==True) & (ipar==7)):
+        model3D.set_pel(to_store.reshape(nx,ny,nz))
+      elif ((model3D.full==True) & (ipar==8)):
+        model3D.set_mw(to_store.reshape(nx,ny,nz))
+      elif ((model3D.full==True) & (ipar==10)):
+        model3D.set_x(to_store.reshape(nx,ny,nz))
+      elif ((model3D.full==True) & (ipar==11)):
+          model3D.set_y(to_store.reshape(nx,ny,nz))
+      elif (ipar==12):
+        model3D.set_z(to_store.reshape(nx,ny,nz))
+
+      # Update physical parameter:
+      ipar +=1
+
+    del(to_store)
+    if (verbose==True):
+      print('reading model: %s' % (fname, ))
+  
+    return model3D
+##
+## Develpoing.
+
+  def read_model3D_v3(ofile, nrec, dims, fmt_type, verbose=False):
+  
+    npar, nx, ny, nz = np.int64(dims)
+   
+    if (np.abs(npar-13.) > 1.e-3):
+      print('Something is wrong with the file %s' % fname)
+      print('\tIs it a 3D model file?')
+      return np.nan
+   
     model3D = atm_model3D(nx, ny, nz)
     to_store = np.zeros(np.int((npar*1.)*nx*ny*nz), dtype=np.float32)
-  
+   
     offset=0
     for it_nnn in range(np.int64(nrec)-1):
       tmp = ofile.read_record(dtype=fmt_type)
       to_store[offset:offset+tmp.size] = tmp*1.
       offset=offset+tmp.size
-  
+   
     model3D.set_atmosphere(to_store.reshape(npar,nx,ny,nz))
     if (verbose==True):
       print('reading model: %s' % (fname, ))
-  
+   
     return model3D
   
   f = FortranFile(fname, 'r')
@@ -803,7 +975,10 @@ def read_model(fname, fmt_type=np.float32):
 
   if (np.abs(vers-3.) < 1.e-3):
     #VERSION 3
-    model3D = read_model3D_v3(f,nrec,first_rec[5:],fmt_type)
+    if (devel==False):
+      model3D = read_model3D_v3(f,nrec,first_rec[5:],fmt_type)
+    else:
+      model3D = dev_read_model3D_v3(f,nrec,first_rec[5:],fmt_type)
   else:
     print('Version %i for model atmosphere file not supported!' % np.int(vers))
     return np.nan
@@ -814,7 +989,7 @@ def read_model(fname, fmt_type=np.float32):
 
 class atm_model3D(object):
 
-  def __init__(self, nx, ny, nz):
+  def __init__(self, nx, ny, nz, full=False):
 
     self.nx = nx * 1
     self.ny = ny * 1
@@ -826,13 +1001,20 @@ class atm_model3D(object):
     self.by = np.zeros((self.nx, self.ny, self.nz))
     self.bz = np.zeros((self.nx, self.ny, self.nz))
     self.vz = np.zeros((self.nx, self.ny, self.nz))
-    self.pel = np.zeros((self.nx, self.ny, self.nz))
-    self.mw = np.zeros((self.nx, self.ny, self.nz))
     self.tau = np.zeros((self.nx, self.ny, self.nz))
-    self.x = np.zeros((self.nx, self.ny, self.nz))
-    self.y = np.zeros((self.nx, self.ny, self.nz))
     self.z = np.zeros((self.nx, self.ny, self.nz))
+    if (full==True):
+      self.pel = np.zeros((self.nx, self.ny, self.nz))
+      self.mw = np.zeros((self.nx, self.ny, self.nz))
+      self.x = np.zeros((self.nx, self.ny, self.nz))
+      self.y = np.zeros((self.nx, self.ny, self.nz))
+    else:
+      self.pel = np.zeros((0,0,0,))
+      self.mw = np.zeros((0,0,0,))
+      self.x = np.zeros((0,0,0,))
+      self.y = np.zeros((0,0,0,))
     self.shape = self.tem.shape
+    self.full = full
 
     # For tv:
     self.tv_defaults = {}
@@ -1024,15 +1206,18 @@ class atm_model3D(object):
     self.set_by(array[4,:,:,:])
     self.set_bz(array[5,:,:,:])
     self.set_vz(array[6,:,:,:])
-    self.set_pel(array[7,:,:,:])
-    self.set_mw(array[8,:,:,:])
     self.set_tau(array[9,:,:,:])
-    self.set_x(array[10,:,:,:])
-    self.set_y(array[11,:,:,:])
+    if (self.full==True):
+      self.set_x(array[10,:,:,:])
+      self.set_y(array[11,:,:,:])
+      self.set_pel(array[7,:,:,:])
+      self.set_mw(array[8,:,:,:])
     self.set_z(array[12,:,:,:])
 
     return
 
+  def write(self, fname, vv=3, fmt_type=np.float32, verbose=False):
+    self.write_model(fname, vv=vv, fmt_type=fmt_type, verbose=verbose)
   def write_model(self, fname, vv=3, fmt_type=np.float32, verbose=False):
 
     def set_to_write(obj,v=None):
@@ -1047,12 +1232,13 @@ class atm_model3D(object):
         array[4,:,:,:] = obj.by.T * 1.
         array[5,:,:,:] = obj.bz.T * 1.
         array[6,:,:,:] = obj.vz.T * 1.
-        array[7,:,:,:] = obj.pel.T * 1.
-        array[8,:,:,:] = obj.mw.T * 1.
         array[9,:,:,:] = obj.tau.T * 1.
-        array[10,:,:,:] = obj.x.T * 1.
-        array[11,:,:,:] = obj.y.T * 1.
         array[12,:,:,:] = obj.z.T * 1.
+        if (obj.full==True):
+          array[7,:,:,:] = obj.pel.T * 1.
+          array[8,:,:,:] = obj.mw.T * 1.
+          array[10,:,:,:] = obj.x.T * 1.
+          array[11,:,:,:] = obj.y.T * 1.
       elif(v==3):
         array = np.zeros((13, obj.nx, obj.ny, obj.nz))
   
@@ -1063,12 +1249,13 @@ class atm_model3D(object):
         array[4,:,:,:] = obj.by * 1.
         array[5,:,:,:] = obj.bz * 1.
         array[6,:,:,:] = obj.vz * 1.
-        array[7,:,:,:] = obj.pel * 1.
-        array[8,:,:,:] = obj.mw * 1.
         array[9,:,:,:] = obj.tau * 1.
-        array[10,:,:,:] = obj.x * 1.
-        array[11,:,:,:] = obj.y * 1.
         array[12,:,:,:] = obj.z * 1.
+        if (obj.full==True):
+          array[7,:,:,:] = obj.pel * 1.
+          array[8,:,:,:] = obj.mw * 1.
+          array[10,:,:,:] = obj.x * 1.
+          array[11,:,:,:] = obj.y * 1.
   
       return array
 
@@ -1341,6 +1528,8 @@ class atm_model3D(object):
     if (type(ity)!=list):
       ity=list(ity)
 
+    pl.figure(fnum)
+    pl.clf()
     fg,ax=pl.subplots(ncols=3,nrows=3,num=fnum, **fkwargs)
 
     if (axis=='z'):
@@ -1419,6 +1608,18 @@ class atm_model3D(object):
     elif (axis=='t'):
       xit = getattr(self, 'tau')
 
+    ylabels = []
+    for itn in range(len(heights)):
+      if (axis=="z"):
+        prefixy = r"z="
+        suffixy = r"[Mm]"
+        factory = 1.e-3
+      else:
+        prefixy = r"$\log\tau_{5}=$"
+        suffixy = r""
+        factory = 1.e0
+      ylabels.append("%s %.2f %s" % (prefixy,heights[itn]*factory,suffixy,))
+
     toshow = np.zeros((len(heights), len(pars), self.nx, self.ny))
 
     for itnh, ith in enumerate(heights):
@@ -1478,7 +1679,8 @@ class atm_model3D(object):
       for itn in range(nts):
         its = ts[itn,:,:]
         im = axc[itn].imshow(its.T*factor, vmin=vmin[itn], vmax=vmax[itn], cmap=ccmap)
-        axc[itn].invert_yaxis()
+        if (axc[itn].yaxis_inverted()):
+          axc[itn].invert_yaxis()
         cbar = pl.colorbar(im, ax=axc[itn], fraction=0.1, shrink=0.9, aspect=30)
         tick_locator = ticker.MaxNLocator(nbins=5, min_n_ticks=3)
         cbar.locator = tick_locator
@@ -1513,7 +1715,7 @@ class atm_model3D(object):
 
     pl.close(fignum)
     fg, ax = pl.subplots(ncols=len(pars),nrows=len(heights), num=fignum \
-        , squeeze=False, **fkwargs)
+        , squeeze=False, **fkwargs, sharex=True, sharey=True)
     for itnp, itp in enumerate(pars):
       show_col(ax[:,itnp], toshow[:,itnp,:,:] \
           , self.tv_defaults['cmap'][itp] \
@@ -1527,7 +1729,7 @@ class atm_model3D(object):
           ax[itn,itnp].yaxis.set_ticklabels([])
       if (itnp==0):
         for itn in range(len(heights)):
-          ax[itn,itnp].set_ylabel('y [px]')
+          ax[itn,itnp].set_ylabel('%s\ny [px]' % (ylabels[itn],))
       # X:
       if (len(heights)>1):
         for itn in range(len(heights)-1):
@@ -1639,6 +1841,8 @@ def plot_models(models,fnum=1,itx=[0,],ity=[0,], axis='z', labels=[] \
   #
   # Once input checked, plot atmosphere model:
   #
+  pl.figure(fnum)
+  pl.clf()
   fg,ax=pl.subplots(ncols=3,nrows=3,num=fnum, **fkwargs)
   lrangex=1.e99
   urangex=-1.e99
@@ -2462,4 +2666,76 @@ def read_logtaus(fname, fmt_type=np.float32):
   f.close()
 
   return ltaus
+#
+################################################################################
+# Generic reader:
+################################################################################
+
+def read(fname, fmt_type=np.float32, devel=False, itx=-1):
+
+  def read_profile3D_v3(ofile, nrec, dims, fmt_type):
+  
+    from pdb import set_trace as stop
+  
+    nx, ny, nw, ns = np.int16(dims)
+  
+    profile3D = stk_profile3D(nw, nx, ny)
+  
+    to_store = np.zeros(np.int64((ns*1.)*nx*ny*nw), dtype=np.float32)
+  
+    offset=0
+    for it_nnn in range(np.int16(nrec)-1):
+      tmp = ofile.read_record(dtype=fmt_type)
+      #print tmp.size
+      if (it_nnn == 0):
+        indx = tmp * 1.
+      if (it_nnn == 1):
+        wave = tmp * 1.
+      if (it_nnn >= 2):
+        to_store[offset:offset+tmp.size] = tmp*1.
+        offset=offset+tmp.size
+  
+    toload = np.moveaxis(to_store.reshape(nx,ny,nw,4)\
+        , [0,1,2,3], [2,3,1,0]) * 1.
+    #print toload.shape, (ns,nw,nx,ny), indx, wave
+    profile3D.set_profiles(toload, indx, wave)
+  
+    return profile3D
+
+  f = FortranFile(fname, 'r')
+  first_rec = f.read_record(dtype=fmt_type)
+  f.close()
+
+  posv = first_rec[0]
+  negv = first_rec[1]
+  fid = first_rec[2]
+  nrec = first_rec[3]
+  ndims = first_rec[4]
+
+  medv = (posv + negv) / 2.
+  verp = posv - medv
+  vern = negv - medv
+  vers = (posv - negv) / 2.
+
+  if ( (np.abs(medv-3000.) > 1.e-3) ):
+    print('Something is wrong with the file %s' % fname)
+    print('\tIs it a 3D file?')
+    return np.nan
+
+  # Stokes profiles:
+  if (np.abs(fid-160904.) < 1.e-3):
+    res = read_profile(fname, fmt_type=fmt_type)
+  # Model atmosphere:
+  elif (np.abs(fid-130904.) < 1.e-3):
+    res = read_model(fname, fmt_type=fmt_type, devel=devel)
+  elif (np.abs(fid-18060904.) < 1.e-3):
+    res = read_rf(fname, itx=itx, fmt_type=fmt_type)
+  else:
+    print("\t")
+    print("\t'firtez-dz.py':: read:")
+    print("\tUnknown file type: %s" % (fname, ))
+    return np.nan
+
+  return res
+
 
