@@ -976,6 +976,7 @@ def read_model(fname, fmt_type=np.float32, devel=False):
   if (np.abs(vers-3.) < 1.e-3):
     #VERSION 3
     if (devel==False):
+      print("Not-developing!")
       model3D = read_model3D_v3(f,nrec,first_rec[5:],fmt_type)
     else:
       model3D = dev_read_model3D_v3(f,nrec,first_rec[5:],fmt_type)
@@ -989,7 +990,7 @@ def read_model(fname, fmt_type=np.float32, devel=False):
 
 class atm_model3D(object):
 
-  def __init__(self, nx, ny, nz, full=False):
+  def __init__(self, nx, ny, nz, full=True):
 
     self.nx = nx * 1
     self.ny = ny * 1
