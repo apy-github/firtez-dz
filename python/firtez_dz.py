@@ -290,8 +290,86 @@ class stk_profile3D(object):
     
       return
 
+    def write_profile3D_v4(fname, data, fmt_type=np.float32):
+    
+      indx = data[0]
+      wave = data[1]
+      #CAREFUL, DATA COMES WITH AN ALREADY CHANGED AXIS ORDER!!!!
+      # IT MIGHT BE WORTH CHANGING IT?
+      # MOREOVER, SO MANY COPIES OF THE SAME THING IS VERY MEMORY CONSUMING!!!
+      data4D = data[2]
+    
+      #_, nw, ny, nx = data4D.shape
+      nx, ny, nw, ns = data4D.shape
+      #print(data4D.reshape(-1,ns).sum(0))
+      data = data4D.flatten()
+      del(data4D)
+    
+      idd = 160904
+      v=4
+    
+      if (fmt_type != np.float32):
+        print('Not implemented yet!')
+        return np.nan
+    
+      # We write single precision numbers: 32 bits
+      # This is 4 bytes
+    
+      nnum_to_write = 4. * nw * ny * nx
+      nbyts_to_write = nnum_to_write * 4.
+    
+      #print(nnum_to_write)
+    
+      # The maximum size of a fortran record is 2Gb
+      nbyts_max_frec = 2. * 1024. * 1024. * 1024.
+      nnum_max_frec = nbyts_max_frec / 4.
+    
+      # We set the maximum number of fortran rec to actual_max-10:
+      nnum_rec = np.int(nnum_max_frec - 10.)
+      nrecs_to_write = np.int(np.ceil(nnum_to_write/nnum_rec))
+    
+      # FIRST, WE WRITE A FIRST RECORD WITH THE MANDATORY DATA:
+      towrite = np.zeros(9, dtype=fmt_type)
+    
+      towrite[0] = 3000 + v
+      towrite[1] = 3000 - v
+      towrite[2] = idd * 1.
+      towrite[3] = nrecs_to_write+3.
+      towrite[4] = 4.  # NUMBER OF DIMENSIONS
+      towrite[5] = nx * 1.
+      towrite[6] = ny * 1.
+      towrite[7] = nw * 1.
+      towrite[8] = 4.  # NUMBER OF STOKES
+    
+      #OPEN WRITING FILE:
+      f=FortranFile(fname,'w')
+      # FIRST ACCESS:
+      f.write_record(np.float32(towrite))
+      # ONGOING ACCESES:
+      f.write_record(np.float32(indx))
+      f.write_record(np.float32(wave))
+      #         SET OF DATA:
+      offset = 0
+      for it_nnn in range(nrecs_to_write):
+        #print('Writing %i of %i' % (it_nnn+1, nrecs_to_write))
+        #towrite = data4D[it_nnn,:,:,:].reshape(-1) * 1.
+        if (it_nnn != nrecs_to_write - 1):
+          towrite = data[offset:offset+nnum_rec] * 1.
+          #print towrite.size, nnum_rec
+        else:
+          towrite = data[offset:] * 1.
+          #print towrite.size, nnum_rec
+        f.write_record(np.float32(towrite))
+        offset=offset+nnum_rec
+      # CLOSE IT
+      f.close()
+    
+      return
+
     if (vv == 3):
       write_profile3D_v3(fname, set_to_write(self, v=3), fmt_type=fmt_type)
+    elif (vv == 4):
+      write_profile3D_v4(fname, set_to_write(self, v=4), fmt_type=fmt_type)
     else:
       print('Version %i for profile file not supported!' % i (vv, ))
 
@@ -309,54 +387,69 @@ class stk_profile3D(object):
 
     return new_profiles
 
-  def plot(self,fnum=1,itx=[0,],ity=[0,], axis='w' \
-      , pkwargs={}, fkwargs={}):
+  def plot(self, **fkwargs):
 
-    if (type(itx)!=list):
-      itx=list(itx)
-    if (type(ity)!=list):
-      ity=list(ity)
-
-    if (axis=='p'):
-      xtoplot = np.arange(self.nw)
-    elif(axis=='w'):
-      xtoplot = self.wave * 1.
-    else:
-      print("axis='p' or axis='w'")
-      return
-
-    pl.figure(fnum)
-    pl.clf()
-    fg,ax=pl.subplots(ncols=2,nrows=2,num=fnum,sharex=True, **fkwargs)
-    for it_nnn in range(len(itx)):
-      ax[0,0].plot(xtoplot, self.stki[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
-      ax[1,0].plot(xtoplot, self.stkq[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
-      ax[0,1].plot(xtoplot, self.stku[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
-      ax[1,1].plot(xtoplot, self.stkv[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
-    #ax[1,0].xaxis.set_ticks_position('right')
-
-    if (np.mean(self.stki)<5.):
-      ax[0,0].set_ylabel(r'I/I$_{{\rm c}}$')
-      ax[0,1].set_ylabel(r'Q/I$_{{\rm c}}$ [$\times10^{3}$]')
-      ax[1,0].set_ylabel(r'U/I$_{{\rm c}}$ [$\times10^{3}$]')
-      ax[1,1].set_ylabel(r'V/I$_{{\rm c}}$ [$\times10^{3}$]')
-    else:
-      ax[0,0].set_ylabel(r'I')
-      ax[0,1].set_ylabel(r'Q [$\times10^{3}$]')
-      ax[1,0].set_ylabel(r'U [$\times10^{3}$]')
-      ax[1,1].set_ylabel(r'V [$\times10^{3}$]')
-
-    if (axis == 'p'):
-      ax[1,0].set_xlabel(r'$\lambda$ [px]')
-      ax[1,1].set_xlabel(r'$\lambda$ [px]')
-
-    elif (axis == 'w'):
-      ax[1,0].set_xlabel(r'$\lambda$ [m$\AA$]')
-      ax[1,1].set_xlabel(r'$\lambda$ [m$\AA$]')
-
-      fg.tight_layout()
+    plot_profiles([self], **fkwargs)
 
     return
+
+#  def plot(self,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
+#    , rangex=[], pkwargs={} \
+#    , pargs=(), pkargs={}, fkwargs={}):
+#
+#    plot_profiles([self], fnum=fnum, itx=itx, ity=ity, axis=axis, labels=labels \
+#        , rangex=[], pkwargs={}, pargs=(), pkargs={}, fkwargs=f)
+#
+#
+#    return
+#  def plot(self,fnum=1,itx=[0,],ity=[0,], axis='w' \
+#      , pkwargs={}, fkwargs={}):
+#
+#    if (type(itx)!=list):
+#      itx=list(itx)
+#    if (type(ity)!=list):
+#      ity=list(ity)
+#
+#    if (axis=='p'):
+#      xtoplot = np.arange(self.nw)
+#    elif(axis=='w'):
+#      xtoplot = self.wave * 1.
+#    else:
+#      print("axis='p' or axis='w'")
+#      return
+#
+#    pl.figure(fnum)
+#    pl.clf()
+#    fg,ax=pl.subplots(ncols=2,nrows=2,num=fnum,sharex=True, **fkwargs)
+#    for it_nnn in range(len(itx)):
+#      ax[0,0].plot(xtoplot, self.stki[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
+#      ax[1,0].plot(xtoplot, self.stkq[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
+#      ax[0,1].plot(xtoplot, self.stku[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
+#      ax[1,1].plot(xtoplot, self.stkv[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
+#    #ax[1,0].xaxis.set_ticks_position('right')
+#
+#    if (np.mean(self.stki)<5.):
+#      ax[0,0].set_ylabel(r'I/I$_{{\rm c}}$')
+#      ax[0,1].set_ylabel(r'Q/I$_{{\rm c}}$ [$\times10^{3}$]')
+#      ax[1,0].set_ylabel(r'U/I$_{{\rm c}}$ [$\times10^{3}$]')
+#      ax[1,1].set_ylabel(r'V/I$_{{\rm c}}$ [$\times10^{3}$]')
+#    else:
+#      ax[0,0].set_ylabel(r'I')
+#      ax[0,1].set_ylabel(r'Q [$\times10^{3}$]')
+#      ax[1,0].set_ylabel(r'U [$\times10^{3}$]')
+#      ax[1,1].set_ylabel(r'V [$\times10^{3}$]')
+#
+#    if (axis == 'p'):
+#      ax[1,0].set_xlabel(r'$\lambda$ [px]')
+#      ax[1,1].set_xlabel(r'$\lambda$ [px]')
+#
+#    elif (axis == 'w'):
+#      ax[1,0].set_xlabel(r'$\lambda$ [m$\AA$]')
+#      ax[1,1].set_xlabel(r'$\lambda$ [m$\AA$]')
+#
+#      fg.tight_layout()
+#
+#    return
   #
   # TV
   #
@@ -709,7 +802,8 @@ def compare_tv(stokes, pars, waves, fignum=1\
   #
 
 
-def plot_profiles(profiles,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
+def plot_profiles(profiles, pars=['all'] \
+    ,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
     , rangex=[], pkwargs={} \
     , pargs=(), pkargs={}, fkwargs={}):
 
@@ -721,6 +815,8 @@ def plot_profiles(profiles,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
     profiles=list(profiles)
   if (type(labels)!=list):
     labels=list(labels)
+  if (type(pars)!=list):
+    pars=list(pars)
 #  if (type(linestyle)!=list):
 #    linestyle=list(linestyle)
   if (type(pkwargs) != list):
@@ -734,6 +830,10 @@ def plot_profiles(profiles,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
   if (len(labels)==0):
     show_labels = False
     labels = [''] * len(profiles)
+
+  if (pars[0]=='all'):
+    pars = ['stki', 'stkq', 'stku', 'stkv']
+
 
 #  if (len(linestyle)==1):
 #    linestyle = linestyle * len(profiles)
@@ -752,10 +852,24 @@ def plot_profiles(profiles,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
   #
   # Plot itself:
   #
+  #
+  # Number of columns and rows:
+  #
+  sqrtabove = np.int32(np.ceil(np.sqrt(len(pars))))
+  axestorem = 0
+  if (len(pars)%2 != 0):
+    ncols=sqrtabove//2*2
+    nrows=np.int32(np.ceil((1.*len(pars))/(1.*ncols)))
+    axestorem = ncols * nrows - len(pars)
+  else:
+    ncols=sqrtabove
+    nrows=np.int16(np.ceil(len(pars)/np.float(ncols)))
 
   pl.figure(fnum)
   pl.clf()
-  fg,ax=pl.subplots(ncols=2,nrows=2,num=fnum,sharex=True, **fkwargs)
+  fg,ax=pl.subplots(ncols=ncols,nrows=nrows,num=fnum,sharex=True\
+      ,squeeze=False, **fkwargs)
+  fax = ax.flatten()
   lrangex=1.e99
   urangex=-1.e99
   pltcnt = -1
@@ -778,34 +892,93 @@ def plot_profiles(profiles,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
 
       pltcnt += 1
 
-      ax[0,0].plot(xtoplot \
-          , self.stki[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
-      ax[1,0].plot(xtoplot \
-          , self.stkq[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
-      ax[0,1].plot(xtoplot \
-          , self.stku[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
-      ax[1,1].plot(xtoplot \
-          , self.stkv[:,itx[it_nnn],ity[it_nnn]], label=labels[itn] \
-          , **pkwargs[pltcnt])
+      for cnt, itp in enumerate(pars):
+
+        itdata = getattr(self, itp)
+        fax[cnt].plot(xtoplot \
+            , itdata[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
+        del(itdata)
+#      ax[0,0].plot(xtoplot \
+#          , self.stki[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
+#      ax[1,0].plot(xtoplot \
+#          , self.stkq[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
+#      ax[0,1].plot(xtoplot \
+#          , self.stku[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
+#      ax[1,1].plot(xtoplot \
+#          , self.stkv[:,itx[it_nnn],ity[it_nnn]], label=labels[itn] \
+#          , **pkwargs[pltcnt])
+
+  nylabel_dict = {}
+  nylabel_dict['stki'] = r'I/I$_{{\rm c}}$'
+  nylabel_dict['stkq'] = r'Q/I$_{{\rm c}}$'
+  nylabel_dict['stku'] = r'U/I$_{{\rm c}}$'
+  nylabel_dict['stkv'] = r'V/I$_{{\rm c}}$'
+
+  ylabel_dict = {}
+  ylabel_dict['stki'] = r'I/I$_{{\rm c}}$'
+  ylabel_dict['stkq'] = r'Q/I$_{{\rm c}}$'
+  ylabel_dict['stku'] = r'U/I$_{{\rm c}}$'
+  ylabel_dict['stkv'] = r'V/I$_{{\rm c}}$'
+
 
   if (np.mean(profiles[0].stki)<5.):
-    ax[0,0].set_ylabel(r'I/I$_{{\rm c}}$')
-    ax[0,1].set_ylabel(r'Q/I$_{{\rm c}}$')
-    ax[1,0].set_ylabel(r'U/I$_{{\rm c}}$')
-    ax[1,1].set_ylabel(r'V/I$_{{\rm c}}$')
+    for cnt, itp in enumerate(pars):
+      fax[cnt].set_ylabel(nylabel_dict[itp])
+   ### ax[0,0].set_ylabel(r'I/I$_{{\rm c}}$')
+   ### ax[0,1].set_ylabel(r'Q/I$_{{\rm c}}$')
+   ### ax[1,0].set_ylabel(r'U/I$_{{\rm c}}$')
+   ### ax[1,1].set_ylabel(r'V/I$_{{\rm c}}$')
   else:
-    ax[0,0].set_ylabel(r'I')
-    ax[0,1].set_ylabel(r'Q')
-    ax[1,0].set_ylabel(r'U')
-    ax[1,1].set_ylabel(r'V')
+    for cnt, itp in enumerate(pars):
+      fax[cnt].set_ylabel(ylabel_dict[itp])
+#    ax[0,0].set_ylabel(r'I')
+#    ax[0,1].set_ylabel(r'Q')
+#    ax[1,0].set_ylabel(r'U')
+#    ax[1,1].set_ylabel(r'V')
 
-  if (axis == 'p'):
-    ax[1,0].set_xlabel(r'$\lambda$ [px]')
-    ax[1,1].set_xlabel(r'$\lambda$ [px]')
+#  if (axis == 'p'):
+#    ax[1,0].set_xlabel(r'$\lambda$ [px]')
+#    ax[1,1].set_xlabel(r'$\lambda$ [px]')
+#
+#  elif (axis == 'w'):
+#    ax[1,0].set_xlabel(r'$\lambda$ [m$\AA$]')
+#    ax[1,1].set_xlabel(r'$\lambda$ [m$\AA$]')
+#
+#
 
-  elif (axis == 'w'):
-    ax[1,0].set_xlabel(r'$\lambda$ [m$\AA$]')
-    ax[1,1].set_xlabel(r'$\lambda$ [m$\AA$]')
+  for itn in range(ncols-axestorem):
+    if (axis == 'p'):
+      ax[-1, itn].set_xlabel(r'$\lambda$ [px]')
+    elif (axis == 'w'):
+      ax[-1, itn].set_xlabel(r'$\lambda$ [m$\AA$]')
+  # Final layout
+  fg.tight_layout()
+
+
+  for itn1 in range(ncols):
+    for itn2 in range(nrows-1):
+      if (itn2==nrows-2):
+        if (axestorem>0):
+          if (itn1+axestorem<ncols):
+            ax[itn2, itn1].xaxis.set_ticklabels([])
+          else:
+            pl.delaxes(ax[itn2+1, itn1])
+            if (axis == 'p'):
+              ax[itn2, itn1].set_xlabel(r'$\lambda$ [px]')
+            elif (axis == 'w'):
+              ax[itn2, itn1].set_xlabel(r'$\lambda$ [m$\AA$]')
+        else:
+          ax[itn2, itn1].xaxis.set_ticklabels([])
+      else:
+        ax[itn2, itn1].xaxis.set_ticklabels([])
+ 
+
+
+
+
+
+
+
 
   if (len(rangex)==2):
     lrangex=rangex[0]*1.
@@ -1521,72 +1694,79 @@ class atm_model3D(object):
 
 
 
+  def plot(self, **fkwargs):
 
-  def plot(self,fnum=1,itx=[0,],ity=[0,], axis='z', pargs=(), pkargs={}, fkwargs={}):
-
-    if (type(itx)!=list):
-      itx=list(itx)
-    if (type(ity)!=list):
-      ity=list(ity)
-
-    pl.figure(fnum)
-    pl.clf()
-    fg,ax=pl.subplots(ncols=3,nrows=3,num=fnum, **fkwargs)
-
-    if (axis=='z'):
-      xtoplot = self.z * 1.e-3
-    elif(axis=='t'):
-      xtoplot = self.tau * 1.
-    else:
-      print("axis='z' or axis='t'")
-      return
-
-    for it_nnn in range(len(itx)):
-      ax[0,0].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.tem[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
-      ax[0,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.pg[itx[it_nnn],ity[it_nnn],:])
-      ax[0,1].set_yscale('log')
-      ax[0,2].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.rho[itx[it_nnn],ity[it_nnn],:])
-      ax[0,2].set_yscale('log')
-      ax[1,0].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.bx[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
-      ax[1,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.by[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
-      ax[1,2].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.bz[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
-      ax[2,0].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.vz[itx[it_nnn],ity[it_nnn],:]*1.e-5)
-      if (axis == 'z'):
-        ax[2,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.tau[itx[it_nnn],ity[it_nnn],:])
-      elif (axis=='t'):
-        ax[2,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.z[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
-    fg.delaxes(ax[2,2])
-
-
-    ax[0,0].xaxis.set_ticklabels('')
-    ax[0,1].xaxis.set_ticklabels('')
-    ax[0,2].xaxis.set_ticklabels('')
-    ax[1,0].xaxis.set_ticklabels('')
-    ax[1,1].xaxis.set_ticklabels('')
-
-    ax[0,0].set_ylabel(r'T [Kk]')
-    ax[0,1].set_ylabel(r'P$_{g}$ [dyn/cm$^2$]')
-    ax[0,2].set_ylabel(r'$\rho$ [gr/$cm^3$]')
-    ax[1,0].set_ylabel(r'B$_{x}$ [KG]')
-    ax[1,1].set_ylabel(r'B$_{y}$ [KG]')
-    ax[1,2].set_ylabel(r'B$_{z}$ [KG]')
-    ax[2,0].set_ylabel(r'v$_{z}$ [km/s]')
-    if (axis == 'z'):
-      ax[2,1].set_ylabel(r'$\lg\tau_{5}$')
-
-      ax[1,2].set_xlabel(r'z [Mm]')
-      ax[2,0].set_xlabel(r'z [Mm]')
-      ax[2,1].set_xlabel(r'z [Mm]')
-    elif (axis == 't'):
-      ax[2,1].set_ylabel(r'z [Mm]')
-
-      ax[1,2].set_xlabel(r'$\lg\tau_{5}$')
-      ax[2,0].set_xlabel(r'$\lg\tau_{5}$')
-      ax[2,1].set_xlabel(r'$\lg\tau_{5}$')
-
-    fg.tight_layout()
+    #plot_models([self], **fkwargs)
+    new_plot_models([self], **fkwargs)
 
     return
+
+
+###  def plot(self,fnum=1,itx=[0,],ity=[0,], axis='z', pargs=(), pkargs={}, fkwargs={}):
+###
+###    if (type(itx)!=list):
+###      itx=list(itx)
+###    if (type(ity)!=list):
+###      ity=list(ity)
+###
+###    pl.figure(fnum)
+###    pl.clf()
+###    fg,ax=pl.subplots(ncols=3,nrows=3,num=fnum, **fkwargs)
+###
+###    if (axis=='z'):
+###      xtoplot = self.z * 1.e-3
+###    elif(axis=='t'):
+###      xtoplot = self.tau * 1.
+###    else:
+###      print("axis='z' or axis='t'")
+###      return
+###
+###    for it_nnn in range(len(itx)):
+###      ax[0,0].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.tem[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
+###      ax[0,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.pg[itx[it_nnn],ity[it_nnn],:])
+###      ax[0,1].set_yscale('log')
+###      ax[0,2].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.rho[itx[it_nnn],ity[it_nnn],:])
+###      ax[0,2].set_yscale('log')
+###      ax[1,0].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.bx[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
+###      ax[1,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.by[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
+###      ax[1,2].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.bz[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
+###      ax[2,0].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.vz[itx[it_nnn],ity[it_nnn],:]*1.e-5)
+###      if (axis == 'z'):
+###        ax[2,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.tau[itx[it_nnn],ity[it_nnn],:])
+###      elif (axis=='t'):
+###        ax[2,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.z[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
+###    fg.delaxes(ax[2,2])
+###
+###
+###    ax[0,0].xaxis.set_ticklabels('')
+###    ax[0,1].xaxis.set_ticklabels('')
+###    ax[0,2].xaxis.set_ticklabels('')
+###    ax[1,0].xaxis.set_ticklabels('')
+###    ax[1,1].xaxis.set_ticklabels('')
+###
+###    ax[0,0].set_ylabel(r'T [Kk]')
+###    ax[0,1].set_ylabel(r'P$_{g}$ [dyn/cm$^2$]')
+###    ax[0,2].set_ylabel(r'$\rho$ [gr/$cm^3$]')
+###    ax[1,0].set_ylabel(r'B$_{x}$ [KG]')
+###    ax[1,1].set_ylabel(r'B$_{y}$ [KG]')
+###    ax[1,2].set_ylabel(r'B$_{z}$ [KG]')
+###    ax[2,0].set_ylabel(r'v$_{z}$ [km/s]')
+###    if (axis == 'z'):
+###      ax[2,1].set_ylabel(r'$\lg\tau_{5}$')
+###
+###      ax[1,2].set_xlabel(r'z [Mm]')
+###      ax[2,0].set_xlabel(r'z [Mm]')
+###      ax[2,1].set_xlabel(r'z [Mm]')
+###    elif (axis == 't'):
+###      ax[2,1].set_ylabel(r'z [Mm]')
+###
+###      ax[1,2].set_xlabel(r'$\lg\tau_{5}$')
+###      ax[2,0].set_xlabel(r'$\lg\tau_{5}$')
+###      ax[2,1].set_xlabel(r'$\lg\tau_{5}$')
+###
+###    fg.tight_layout()
+###
+###    return
 
   #
   # TV
@@ -1716,7 +1896,7 @@ class atm_model3D(object):
 
     pl.close(fignum)
     fg, ax = pl.subplots(ncols=len(pars),nrows=len(heights), num=fignum \
-        , squeeze=False, **fkwargs, sharex=True, sharey=True)
+        , squeeze=False, sharex=True, sharey=True, **fkwargs)
     for itnp, itp in enumerate(pars):
       show_col(ax[:,itnp], toshow[:,itnp,:,:] \
           , self.tv_defaults['cmap'][itp] \
@@ -2016,7 +2196,7 @@ def plot_models(models,fnum=1,itx=[0,],ity=[0,], axis='z', labels=[] \
 #
 # START: new plot models:
 #
-def new_plot_models(models, pars,fnum=1,itx=[0,],ity=[0,], axis='t', labels=[] \
+def new_plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=[] \
     , rangex=[], zorigin=False, displaytau=True \
     , skwargs={}, pargs=(), pkargs={}, fkwargs={}):
 
@@ -2738,5 +2918,57 @@ def read(fname, fmt_type=np.float32, devel=False, itx=-1):
     return np.nan
 
   return res
+
+def write_lsf(fname, data, fmt_type=np.float32):
+
+  
+  idd = 3330904
+  v=3
+  
+  if (fmt_type != np.float32):
+    print('Not implemented yet!')
+    return np.nan
+  
+  # We write single precision numbers: 32 bits
+  # This is 4 bytes
+
+  nw=data.size
+  nnum_to_write = 4. * nw
+  nbyts_to_write = nnum_to_write * 4.
+  
+  # The maximum size of a fortran record is 2Gb
+  nbyts_max_frec = 2. * 1024. * 1024. * 1024.
+  nnum_max_frec = nbyts_max_frec / 4.
+  
+  # We set the maximum number of fortran rec to actual_max-10:
+  nnum_rec = np.int(nnum_max_frec - 10.)
+  nrecs_to_write = np.int(np.ceil(nnum_to_write/nnum_rec))
+  
+  # FIRST, WE WRITE A FIRST RECORD WITH THE MANDATORY DATA:
+  towrite = np.zeros(6, dtype=fmt_type)
+  
+  towrite[0] = 3000 + v
+  towrite[1] = 3000 - v
+  towrite[2] = idd * 1.
+  towrite[3] = nrecs_to_write+1.
+  towrite[4] = 1.  # NUMBER OF DIMENSIONS
+  towrite[5] = nw * 1.
+  
+  #OPEN WRITING FILE:
+  f=FortranFile(fname,'w')
+  f.write_record(np.float32(towrite))
+  #         SET OF DATA:
+  offset = 0
+  for it_nnn in range(nrecs_to_write):
+    if (it_nnn != nrecs_to_write - 1):
+      towrite = data[offset:offset+nnum_rec] * 1.
+    else:
+      towrite = data[offset:] * 1.
+    f.write_record(np.float32(towrite))
+    offset=offset+nnum_rec
+  # CLOSE IT
+  f.close()
+  
+  return
 
 
