@@ -9,14 +9,28 @@
 #
 LIBS = \
         -L /Users/apy/libraries/lib -llapack -lblas \
-        -L /opt/local/include/ -lfftw3
+        -L /usr/include/ -lfftw3
+LIBS = \
+	-L /home/adpa7375/libraries/src_scratch/lapack-3.9.0 -llapack -lblas \
+        -L /usr/include/ -lfftw3
+LIBS = \
+	-L /home/adpa7375/libraries/src/lapack-3.9.0 -llapack -lblas \
+        -L /usr/include/ -lfftw3
+
 #
-INCS = -I/opt/local/include/
+INCS = -I/usr/include/
 #
 LDFLAGS = 
 #
 #===========================================
 # From here on, you should not need to edit anything...
+#
+#
+# Common to both compilers
+# 
+FOPT=-O3 -fopenmp
+F90F = -c
+F77F = -c
 #
 #
 # Compiler dependent:
@@ -44,13 +58,6 @@ else
 #
 endif
 
-#
-# Common to both compiler
-# 
-FOPT=-O3 -fopenmp
-F90F = -c
-F77F = -c
-#
 #
 #
 
@@ -149,7 +156,8 @@ derivvar.o: derivvar.f90 cons_param.o
 allocate_utils.o: allocate_utils.f90 cons_param.o
 	$(FC) $(F90F) $(FOPT) allocate_utils.f90
 
-misc.o: misc.f90 cons_param.o allocate_utils.o
+misc.o: misc.f90 cons_param.o allocate_utils.o \
+	phys_param.o forward_param.o
 	$(FC) $(F90F) $(FOPT) misc.f90
 
 splines.o: splines.f90 cons_param.o
@@ -252,7 +260,7 @@ forward.o: forward.f90 cons_param.o grid_param.o \
 	$(FC) $(F90F) $(FOPT) forward.f90
 
 get_dmodel.o: get_dmodel.f90 cons_param.o grid_param.o \
-        forward_param.o phys_param.o \
+        forward_param.o phys_param.o model_spatial_extension.o\
         code_modes.o lm.o user_mpi.o invert_param.o \
         atm_param.o phys_param.o forward.o \
 	coupled_inversion.o lm.o height_handler.o

@@ -67,8 +67,10 @@ MODULE ATM_PARAM
        CASE(12)
           TAU5 => MODEL(:,K)
        ENDSELECT
+!print*, K, ':', SUM(MODEL(:,K))
     ENDDO
     ZZ(:)=MODEL(:,13)
+!print*, 13, ':', SUM(MODEL(:,13))
     !
   END SUBROUTINE SPLIT_MODEL
   !

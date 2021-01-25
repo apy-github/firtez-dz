@@ -60,8 +60,9 @@ MODULE PRE_POST_DUTIES
     !
     USE ATOM_DATABASE, ONLY: ATOM_INIT
     USE LOG, ONLY: LOG_INIT
-    USE LINES_DATABASE, ONLY: READ_LINES_DATABASE
+    USE LINES_DATABASE, ONLY: NREAD_LINES_DATABASE
     USE INPUT_FILE, ONLY: READ_INPUT_FILE, READ_MINPUT_FILE
+    USE user_mpi, only: mpi__myrank
     !
     ! FIRST STEP IS DIFFERENT FOR SLAVES AND MASTER...
     ! ...FIRST, THERE IS A COMMON STEP IN WHICH WE READ...
@@ -69,14 +70,14 @@ MODULE PRE_POST_DUTIES
     ! ...NEEDED FOR THE READING
     !
     ! Initialize log file
-    CALL LOG_INIT()
+    IF (mpi__myrank.eq.0) CALL LOG_INIT()
     ! Initialize atomic database
     CALL ATOM_INIT()
     !
     ! Prepare to read input file
     CALL READ_MINPUT_FILE()
     !
-    CALL READ_LINES_DATABASE()
+    CALL NREAD_LINES_DATABASE()
     ! Prepare to read input file
     CALL READ_INPUT_FILE()
     !
@@ -329,12 +330,14 @@ PRINT*, '*********************************************************************'
       ! Response functions are only written if explicitly stated:
       IF (SAVE_RFS.EQV..TRUE.) THEN
         PRINT*, 'WRITING response functions:!'
+        PRINT*, 'Not just now!'
         CALL ALLOCATE_6D_SP(WDSYN,8,4,NUMW,NZ,NY,NX,'SYN')
         OFF=0
         DO I=1,4
           POFF=0
           IF (INV_STK(I).EQV..TRUE.) THEN
             DO J=1,SIZE(INV_ATMPAR)
+!PRINT*, INV_ATMPAR, ' <<<<<<<<<<<<<<<<'
               IF (INV_ATMPAR(J).EQV..TRUE.) THEN
                 WDSYN(J,I,:,:,:,:)=DSYN(OFF+1:OFF+NUMW,POFF+1:POFF+NZ,:,:)
                 POFF=POFF+NZ
@@ -635,11 +638,12 @@ PRINT*, '*********************************************************************'
     IF (NFREEP.EQ.NFREEV) THEN
       MAXITER=1
     ELSE
-      MAXITER=CEILING(DLOG(DBLE(INFREEPMAX))/DLOG(DBLE(CYCPOW)))+1
+      !MAXITER=CEILING(DLOG(DBLE(INFREEPMAX))/DLOG(DBLE(CYCPOW)))+1
+      MAXITER=FLOOR(DLOG(DBLE(INFREEPMAX))/DLOG(DBLE(CYCPOW)))
       ! To allow some cycles in which T preceeds the othres, we...
       ! ...add a few additional cycles:
-TOFFSET=0
-      MAXITER=MAXITER+TOFFSET
+TOFFSET=1
+      !MAXITER=MAXITER+TOFFSET
     ENDIF
     !
     CALL ALLOCATE_1D_SP(MPERTURBATION, NFREEV*NZ, 'MPERTURBATION')
@@ -654,14 +658,14 @@ TOFFSET=0
   !
   !------------------------------------------------
   !
-  SUBROUTINE LSF_INIT()
+  SUBROUTINE REFERENCE_LSF_INIT()
     !
     USE USER_FFTW3, ONLY: GPLAN1D, FFTINI, FFTEND, FFTK1D, FFTY1D &
         , FFTW_EXECUTE_DFT_R2C, MAKE_1D_IPLAN, MAKE_1D_PLAN
     USE ALLOCATE_UTILS, ONLY: ALLOCATE_1D_IP, ALLOCATE_1D_DP
     USE CODE_MODES, ONLY: MLSF
     USE FORWARD_PARAM, ONLY: PIXEL_INI, PIXEL_END, WAVE, LSF_KERNEL &
-        , NUML, NUMW, LSF_SIGMA, LSF_W0
+        , NUML, NUMW, LSF_SIGMA, LSF_W0, LSF_FILE
     !
     INTEGER    :: I, J, SKI
     INTEGER    :: WI, WF
@@ -760,6 +764,137 @@ TOFFSET=0
       IF (ALLOCATED(YK)) DEALLOCATE(YK)
     ENDIF
     !
+  END SUBROUTINE REFERENCE_LSF_INIT  !
+  !------------------------------------------------
+  !
+  SUBROUTINE LSF_INIT()
+    !
+    USE USER_FFTW3, ONLY: GPLAN1D, FFTINI, FFTEND, FFTK1D, FFTY1D &
+        , FFTW_EXECUTE_DFT_R2C, MAKE_1D_IPLAN, MAKE_1D_PLAN
+    USE ALLOCATE_UTILS, ONLY: ALLOCATE_1D_IP, ALLOCATE_1D_DP
+    USE CODE_MODES, ONLY: MLSF
+    USE FORWARD_PARAM, ONLY: PIXEL_INI, PIXEL_END, WAVE, LSF_KERNEL &
+        , NUML, NUMW, LSF_SIGMA, LSF_W0, LSF_FILE, LSF_VALID
+    USE MISC, ONLY: READ_LSF_FILE
+    USE USER_MPI, ONLY: mpi__myrank
+    !
+    INTEGER    :: I, J, SKI
+    INTEGER    :: WI, WF
+    INTEGER    :: TOTSIZ, FFTSIZ
+    !
+    REAL(DP),ALLOCATABLE,DIMENSION(:)   :: XK, YK
+    REAL(DP)    :: WOFF
+    !
+    IF (MLSF.EQV..TRUE.) THEN
+      ALLOCATE(LSF_VALID(NUML))
+      LSF_VALID(:)=.FALSE.
+      !
+      !PRINT*, MLSF, NUML, WAVE
+      !PRINT*, PIXEL_INI
+      !PRINT*, PIXEL_END
+      !
+      ! First: estimate transformed dimensions and ...
+      ! ... allocate various fftf and plans:
+      !
+      ALLOCATE(GPLAN1D(2,NUML))
+      CALL ALLOCATE_1D_IP(FFTINI, NUML, 'FFTSTR')
+      CALL ALLOCATE_1D_IP(FFTEND, NUML, 'FFTEND')
+      !
+      FFTINI(1)=1
+      !
+      TOTSIZ=0
+      DO I=1,NUML
+        !
+        WI=PIXEL_INI(I)
+        WF=PIXEL_END(I)
+        SKI=WF-WI+1
+        !
+        FFTSIZ=SKI/2+1
+        TOTSIZ=TOTSIZ+FFTSIZ
+        !
+        FFTEND(I)=FFTINI(I)+FFTSIZ-1
+        IF (I.LT.NUML) FFTINI(I+1)=FFTEND(I)+1
+        !
+      ENDDO
+      !
+      ALLOCATE(FFTK1D(TOTSIZ))
+      ALLOCATE(FFTY1D(TOTSIZ))
+      FFTK1D(:)=0.0D0
+      FFTY1D(:)=0.0D0
+      !
+      ! Second, Build real kernels:
+      CALL ALLOCATE_1D_DP(LSF_KERNEL, NUMW, 'LSF_KERNEL')
+      !
+      DO I=1,NUML
+        !
+        ! BUILD AN X ARRAY
+        IF (ALLOCATED(XK)) DEALLOCATE(XK)
+        IF (ALLOCATED(YK)) DEALLOCATE(YK)
+        !
+        WI=PIXEL_INI(I)
+        WF=PIXEL_END(I)
+        SKI=WF-WI+1
+        !
+        CALL ALLOCATE_1D_DP(YK, SKI, 'YK')
+
+IF ( (LSF_SIGMA(I).NE.-1) .AND. (LSF_W0(I).NE.-1) ) THEN
+        CALL ALLOCATE_1D_DP(XK, SKI, 'XK')
+        !
+        DO J=1,SKI
+          XK(J)=DBLE(J)
+        ENDDO
+        ! Center it
+        XK=XK-SUM(XK)/DBLE(SKI)
+        ! ... in pixels
+        XK=XK*(WAVE(WI+1)-WAVE(WI))
+        ! ... in mA (assuming constant step)
+        ! Deal with even-ity
+        WOFF=0.D0
+        IF(MOD(SKI,2).EQ.0) WOFF=(XK(2)-XK(1))/2.0D0
+        !
+        YK=DEXP(-((XK-LSF_W0(I)-WOFF)**2/(2.0D0*LSF_SIGMA(I)**2)))
+        YK=YK/SUM(YK)
+        YK=CSHIFT(YK,SHIFT=SKI/2,DIM=1)
+        !
+ELSE
+
+  IF (LEN(TRIM(LSF_FILE(I))).NE.0) THEN
+        CALL READ_LSF_FILE(LSF_FILE(I), SKI, YK, I)
+  ENDIF
+
+ENDIF
+
+IF (ABS(SUM(YK)-1.0D0).LT.0.01D0) THEN
+if (mpi__myrank.eq.1) PRINT*, ' Valid LSF for spectral region: ', I
+LSF_VALID(I)=.TRUE.
+        YK=YK/SUM(YK)
+        FFTSIZ=FFTEND(I)-FFTINI(I)+1
+        !
+        LSF_KERNEL(WI:WF)=YK/DBLE(SIZE(YK))
+        !
+        ! Direct plan
+        CALL MAKE_1D_PLAN(GPLAN1D(1,I), SKI, LSF_KERNEL(WI:WF) &
+            , FFTSIZ, FFTK1D(FFTINI(I):FFTEND(I)))
+        ! Inverse plan
+        CALL MAKE_1D_IPLAN(GPLAN1D(2,I), FFTSIZ, FFTK1D(FFTINI(I):FFTEND(I)) &
+            , SKI, LSF_KERNEL(WI:WF))
+        !
+        ! Since kernel is always the same, store its dft already:
+        CALL FFTW_EXECUTE_DFT_R2C(GPLAN1D(1,I),LSF_KERNEL(WI:WF) &
+            , FFTK1D(FFTINI(I):FFTEND(I)))
+ELSE
+if (mpi__myrank.eq.1) PRINT*, ' Spectral region: ', I, ' has not LSF'
+ENDIF
+        !
+        IF (ALLOCATED(XK)) DEALLOCATE(XK)
+        IF (ALLOCATED(YK)) DEALLOCATE(YK)
+        !
+      ENDDO
+      !
+      IF (ALLOCATED(XK)) DEALLOCATE(XK)
+      IF (ALLOCATED(YK)) DEALLOCATE(YK)
+    ENDIF
+    !
   END SUBROUTINE LSF_INIT
   !
   !------------------------------------------------
@@ -776,9 +911,9 @@ TOFFSET=0
     USE user_mpi, ONLY: mpi__myrank
     USE CODE_MODES, ONLY: SAVE_RFS, MTAULIN
     USE GRID_PARAM, ONLY: XX, YY, ZZ, NX, NY, NZ, DX, DY, DZ
-    USE INVERT_PARAM, ONLY: AM_I_DONE, IMASK, MAXITER, NFREQ, INV_ATMPAR
+    USE INVERT_PARAM, ONLY: AM_I_DONE, IMASK, MAXITER, NFREQ, INV_ATMPAR, NFREEV
     USE FORWARD_PARAM, ONLY: ATM_ARGS, BLENDSMAX, NUML, DER_ARGS &
-        , GAIN1D, KC, KC5, KLIN, NUMW, KLINTAU, TAULIN
+        , GAIN1D, KC, KC5, KLIN, NUMW, KLINTAU, TAULIN, FULL_STOKES
     !
     INTEGER           :: I
     !
@@ -858,13 +993,15 @@ TOFFSET=0
       CALL ALLOCATE_2D_SP(MODEL1D_RCV,NZ,ATM_ARGS,'MODEL1D_RCV')
       CALL ALLOCATE_3D_SP(MODEL2D_RCV,NZ,ATM_ARGS,2,'MODEL2D_RCV')
       CALL ALLOCATE_2D_DP(SYN1D,4,NUMW,'SYN1D')
-      CALL ALLOCATE_3D_SP(FS_SYN1D,4,NUMW,NZ,'SYN1D')
+      IF (FULL_STOKES.EQV..TRUE.) THEN
+        CALL ALLOCATE_3D_SP(FS_SYN1D,4,NUMW,NZ,'SYN1D')
+      ENDIF
       CALL ALLOCATE_1D_DP(RSYN1D,NFREQ,'SYN1D')
       CALL ALLOCATE_1D_DP(BEST_RSYN1D,NFREQ,'SYN1D')
       CALL ALLOCATE_1D_DP(ROBS1D,NFREQ,'SYN1D')
       ! This array has always the same size, that is why it is allocated...
       ! ... here:
-      CALL ALLOCATE_4D_DP(DSYN1D,4,DER_ARGS,NUMW,NZ,'DSYN1D')
+      CALL ALLOCATE_4D_DP(DSYN1D,4,ATM_ARGS,NUMW,NZ,'DSYN1D')
       CALL ALLOCATE_4D_DP(EVOLG,4,4,NUMW,NZ,'EVOLG')
       ! Identity matrix
       DO I=1,4
@@ -931,7 +1068,6 @@ TOFFSET=0
       CALL ALLOCATE_5D_SP(SYN5D,4,NUMW,NZ,NY,NX,'SYN5D')
     ENDIF
     ! If LTE
-    !><02.04.2019 CALL ALLOCATE_4D_SP(SYN,4,NUMW,NY,NX,'SYN')
     CALL ALLOCATE_3D_DP(SYN3D,NFREQ,NY,NX,'SYN')
     !----------------------------------------
 !    IF (MRESPFUNCT.EQV..TRUE.) THEN
@@ -943,12 +1079,8 @@ TOFFSET=0
       CALL ALLOCATE_4D_SP(OBS,4,NUMW,NY,NX,'OBS')
       ! To use as storage
       CALL ALLOCATE_3D_DP(OBS3D,NFREQ,NY,NX,'OBS')
-!      IF (.NOT.ALLOCATED(DSYN)) THEN
-!        CALL ALLOCATE_6D_SP(DSYN,4,DER_ARGS,NUMW,NZ,NY,NX,'DSYN')
-!      ENDIF
       !
       CALL ALLOCATE_3D_DP(BEST_SYN,NFREQ,NY,NX,'BETS_SYN')
-!      CALL ALLOCATE_6D_SP(BEST_DSYN,4,DER_ARGS,NUMW,NZ,NY,NX,'BEST_DSYN')
       CALL ALLOCATE_3D_DP(ISIGMAP3D,NFREQ,NY,NX,'SYN')
       !
     ENDIF
@@ -1065,7 +1197,7 @@ TOFFSET=0
     !
     USE USER_FFTW3, ONLY: GPLAN1D, FFTK1D, FFTY1D
     !
-    PRINT*, 'LSF_END'
+    !PRINT*, 'LSF_END'
     DEALLOCATE(GPLAN1D)
     DEALLOCATE(FFTK1D)
     DEALLOCATE(FFTY1D)

@@ -16,6 +16,9 @@ MODULE CHEMICAL_EQUILIBRIUM
   !
   IMPLICIT NONE
   !
+  REAL(DP), DIMENSION(NELEM)  :: VALPHAI,VALPHAII,VNT,VNI,VNII,VNIII
+  REAL(DP), DIMENSION(NELEM)  :: VDALPHAI,VDALPHAII,VDNT,VDNI,VDNII,VDNIII
+  !
   !::::::::::::::::::::::::::::::::::::::::::::::::
   !
   PUBLIC :: GET_RHO
@@ -135,7 +138,12 @@ MODULE CHEMICAL_EQUILIBRIUM
     !
     NELEC=NELEC_NEW
     PELEC=NELEC*KBOL*TEMP
+
+    NUME=DENS-NELEC*MELE
+    NHYD=NUME/DENO_SAM
+
     !
+    PATOM=0.0D0
     DO I=1,NELEM
        PATOM=PATOM+10D0**(ABUND(I)-12D0)
     ENDDO
@@ -146,7 +154,134 @@ MODULE CHEMICAL_EQUILIBRIUM
   !
   !------------------------------------------------
   !
-  SUBROUTINE GET_RHO(TEMP,PG,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW,PRINTTRUE)
+
+
+
+
+
+
+
+
+  SUBROUTINE GET_RHO(TEMP,PG,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW,GETDER)
+    ! This routine obtains the density and electron/atom pressure
+    ! from the total pressure and temperature
+    !
+    REAL(DP),   INTENT(IN)      :: TEMP, PG
+    REAL(DP),   INTENT(INOUT)     :: NHYD, PELEC, PATOM, MOLECW, DENS
+    REAL(DP),   INTENT(INOUT)     :: NELEC
+    LOGICAL, OPTIONAL :: GETDER
+    !
+    INTEGER                     :: J, ITER
+    REAL(DP)                    :: NELEC_NEW, NELEC_OLD, NELEC_EST, ERROR
+    REAL(DP)                    :: NUME
+    LOGICAL :: USEDER
+    !
+    USEDER=.FALSE.
+    IF (PRESENT(GETDER)) USEDER=.TRUE.
+    !
+    DENS=0.0D0
+    MOLECW=0.0D0
+    PATOM=0.0D0
+    NELEC_NEW=0.0D0
+    NELEC_OLD=0.0D0
+    NELEC_EST=0.0D0
+    ERROR=0.0D0
+    NUME=0.0D0
+    NHYD=0.0D0
+    !
+    ! Estimation of electron density
+    !
+    IF ((NELEC.LT.1D0).OR.(NELEC.NE.NELEC)) NELEC=PG/(101D0*KBOL*TEMP)
+    PELEC=NELEC*KBOL*TEMP
+    !
+    ! If our estimation for NELEC is way above the maximum possible...
+    ! ...value, set it to give half of the pressure we have
+    IF (PELEC.GT.PG) NELEC=(PG*0.5)/(KBOL*TEMP) 
+    !
+    ! Pre calculate some stuff needed to ...
+    ! ...calculate neutrals, single ionized and double ionized atoms of
+    !  all species
+    CALL SHORT_PRE_ION_CALC_TEMPRHO(TEMP,NELEC,USEDER)
+    !
+    ERROR=1.0D0
+    ITER=1
+    NELEC_NEW=NELEC
+    NELEC_OLD=NELEC
+    !
+    ! Start loop until convergence
+    !
+    DO WHILE (ERROR.GT.1.0D-4.AND.ITER.LE.100.AND.NHYD.GE.0.0D0)
+       NELEC_OLD = NELEC_NEW
+       ! Estimation of the hydrogen density
+       NUME=PG-NELEC_NEW*KBOL*TEMP
+       NHYD=NUME/(DENO_SA*KBOL*TEMP)
+       NELEC_EST=0.0D0
+
+       VNT(:)=NHYD*10.0D0**(ABUND(:)-12.0D0)
+       CALL SHORT_ION_CALC_TEMPRHO(TEMP,NELEC_NEW,0.0D0,USEDER)
+
+       ! In the case of hydrogen (J=1) NTI corresponds to H- 
+       ! (electron capture)
+       NELEC_EST=VNIII(1)-VNI(1)
+       NELEC_EST=NELEC_EST+SUM(VNII(2:))+SUM(VNIII(2:))
+       !
+!!!       PELEC=NELEC_EST*KBOL*TEMP
+!!!       IF (PELEC.GT.PG) THEN
+!!!         PRINT*, NELEC_EST, PELEC, PG
+!!!         NELEC_EST=(PG*0.9)/(KBOL*TEMP)
+!!!       PELEC=NELEC_EST*KBOL*TEMP
+!!!         PRINT*, NELEC_EST, PELEC, PG, (PG-NELEC_EST*KBOL*TEMP)/(DENO_SA*KBOL*TEMP)
+!!!       ENDIF
+       !
+       NELEC_NEW=(MAX(NELEC_EST,0.0D0)+NELEC_OLD)/2D0
+       ERROR=ABS((NELEC_NEW-NELEC_OLD)/NELEC_NEW)
+       ITER = ITER + 1
+    ENDDO
+    !
+    IF ( (ITER.GE.100) .OR. (NHYD.LT.0.D0) ) THEN
+      PRINT*, ' Either ', NHYD, ' < 0.e0 or ', ITER, ' > 100'
+      PRINT*, TEMP, PG, PATOM+PELEC, DENS, NELEC, NHYD
+      PRINT*, PG-NELEC_NEW*KBOL*TEMP, NELEC_NEW*KBOL*TEMP, NELEC_EST, NELEC_NEW
+      STOP
+    ENDIF
+    !
+    ! Calculate pressure due to electrons and due to atoms
+    !
+    NELEC=NELEC_NEW
+    !
+    ! Calculate density
+    NUME=PG-NELEC*KBOL*TEMP
+    NHYD=NUME/(DENO_SA*KBOL*TEMP)
+    DENS=NHYD*DENO_SAM+NELEC*MELE
+    MOLECW=((DENS*KBOL*TEMP)/MAMU)*PG**(-1D0)
+    !
+    IF ((NHYD.NE.NHYD).OR.(NELEC_NEW.NE.NELEC_NEW)) THEN
+      PRINT*, 'I am ce.f90, Either Nh or Ne are NaN!'
+      PRINT*, TEMP, PG, NHYD, DENS, NELEC
+    ENDIF
+    IF ( (NELEC.LT.0) .OR. (NHYD.LE.0) ) THEN
+      PRINT*, 'I am ce.f90, Either Nh or Ne are below 0!'
+      PRINT*, TEMP, PG, PATOM+PELEC, DENS, NELEC, NHYD
+      STOP
+    ENDIF
+!!!!!    IF (DENS.LT.0) THEN
+!!!!!      PRINT*, ' *get_rho* '
+!!!!!      PRINT*, ' Density is negative! '
+!!!!!      PRINT*, 'TEMP', 'PG', 'NHYD', 'DENS', 'NELEC'
+!!!!!      PRINT*, TEMP, PG, NHYD, DENS, NELEC
+!!!!!      STOP
+!!!!!    ENDIF
+
+    !
+  END SUBROUTINE GET_RHO
+  !
+  !------------------------------------------------
+  !
+
+
+
+
+  SUBROUTINE OLD_GET_RHO(TEMP,PG,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW,PRINTTRUE)
     ! This routine obtains the density and electron/atom pressure
     ! from the total pressure and temperature
     INTEGER                     :: J, ITER
@@ -238,7 +373,7 @@ MODULE CHEMICAL_EQUILIBRIUM
     !
     IF (PRESENT(PRINTTRUE)) WRITE(*,*) 'I am ce.f90', NELEC, MOLECW, ITER, ERROR,NELEC_NEW,NELEC_OLD
     !
-  END SUBROUTINE GET_RHO
+  END SUBROUTINE OLD_GET_RHO
   !
   !------------------------------------------------
   !
@@ -973,6 +1108,7 @@ MODULE CHEMICAL_EQUILIBRIUM
     ENDDO
     !
     DNELECDTEMP_PGAS=DNELEC_EST
+    DNELECDTEMP_PG=DNELEC_EST
     IF (PRESENT(DNE)) DNE=DNELECDTEMP_PGAS
     !
   END SUBROUTINE GET_NE_PG
@@ -1460,6 +1596,113 @@ MODULE CHEMICAL_EQUILIBRIUM
   !
   !------------------------------------------------
   !
+  SUBROUTINE SHORT_PRE_ION_CALC_TEMPRHO(TEMP,NE,DER)
+    !
+    ! Input
+    REAL(DP), INTENT(IN)            :: TEMP, NE
+    LOGICAL, INTENT(IN)             :: DER
+    ! Internal
+    INTEGER                         :: I
+    REAL(DP)                        :: UI, UII, UIII
+    REAL(DP)                        :: DUI, DUII, DUIII
+    REAL(DP)                        :: LAMELEC, EXPOI, EXPOII
+    REAL(DP)                        :: DLAMELEC, DEXPOI, DEXPOII
+    REAL(DP)                        :: DN
+    !
+    ! Loop through all elements
+    LAMELEC = CSAHA1*DBLE(TEMP)**(-3.0D0/2.0D0)      ! This has units of cm^3
+    DO I=1,NELEM
+      ! Get partition functions
+      CALL PARTITION_FUNCTION(I,TEMP,UI,UII,UIII,DUI,DUII,DUIII)
+      ! ALPHAI and ALPHAII factors: these are the factors for the Saha equation
+      EXPOI=CSAHA2*XI(I)/TEMP                      ! Dimensionless
+      EXPOII=CSAHA2*XII(I)/TEMP                    ! Dimensionless
+      ! Check over/under flows
+      IF (EXPOI .GT. 0.0D0) EXPOI=DMIN1(EXPOI,650.0D0)
+      IF (EXPOI .LT. 0.0D0) EXPOI=DMAX1(EXPOI,-650.0D0)
+      IF (EXPOII .GT. 0.0D0) EXPOII=DMIN1(EXPOII,650.0D0)
+      IF (EXPOII .LT. 0.0D0) EXPOII=DMAX1(EXPOII,-650.0D0)
+      !
+      EXPOI = DEXP(EXPOI)
+      EXPOII = DEXP(EXPOII)
+      !
+      VALPHAI(I)=(UI/(2.0D0*UII))*LAMELEC*EXPOI
+      VALPHAII(I)=(UII/(2.0D0*UIII))*LAMELEC*EXPOII
+      !
+      !
+      ! Now derivatives with respect to the temperature at constant density
+      !
+      IF (DER) THEN
+        !
+        DLAMELEC =-3D0/(2D0*TEMP)
+        DEXPOI=-CSAHA2*XI(I)/TEMP**2D0
+        DEXPOII=-CSAHA2*XII(I)/TEMP**2D0
+        !--------------------
+        ! Regular derivatives
+        !--------------------
+        VDALPHAI(I)=VALPHAI(I)*(DUI-DUII+DLAMELEC+DEXPOI)
+        VDALPHAII(I)=VALPHAII(I)*(DUII-DUIII+DLAMELEC+DEXPOII)
+        !
+      ENDIF
+    ENDDO
+    !----
+    !
+  END SUBROUTINE SHORT_PRE_ION_CALC_TEMPRHO
+  !
+  !------------------------------------------------
+  !
+  !
+  !------------------------------------------------
+  !
+  SUBROUTINE SHORT_ION_CALC_TEMPRHO(TEMP,NE,DNE,DER)
+    !
+    ! Input
+    REAL(DP), INTENT(IN)            :: TEMP, NE, DNE
+    LOGICAL, INTENT(IN)             :: DER
+    ! Internal
+    REAL(DP)                        :: UI, UII, UIII
+    REAL(DP)                        :: DUI, DUII, DUIII
+    REAL(DP)                        :: LAMELEC, EXPOI, EXPOII, ALPHAI, ALPHAII
+    REAL(DP)                        :: DLAMELEC, DEXPOI, DEXPOII&
+        , DALPHAI, DALPHAII
+    REAL(DP)                        :: DN
+    !
+    VNI(:)=VNT(:)/(1.0D0+(1.0D0/(NE*VALPHAI(:)))*(1.0D0+(1.0D0/(NE*VALPHAII(:)))))
+    VNII(:)=VNT(:)/(NE*VALPHAI(:)+1.0D0+(1.0D0/(NE*VALPHAII(:))))
+    VNIII(:)=VNT(:)/(1.0D0+NE*VALPHAII(:)*(NE*VALPHAI(:)+1.0D0))
+    !
+    ! Now derivatives with respect to the temperature at constant density
+    !
+    IF (DER) THEN
+       !
+       VDNT(:)=-MELE/DENO_SAM*DNE*10D0**(ABUND(:)-12D0)
+       !
+       VDNI(:)=VDNT(:)*VNI(:)/VNT(:)&
+            -VNT(:)*(1D0+(1D0/(NE*VALPHAI(:)))*(1D0+1D0/(NE*VALPHAII(:))))**(-2D0)&
+            *(1D0/(NE**2D0*VALPHAI(:)))*((-1D0/VALPHAI(:))*(DNE*VALPHAI(:)+NE*VDALPHAI(:))&
+            *(1D0+1D0/(NE*VALPHAII(:)))-(1D0/(NE*VALPHAII(:)**2D0))&
+            *(DNE*VALPHAII(:)+NE*VDALPHAII(:)))
+       !
+       VDNII(:)=VDNT(:)*VNII(:)/VNT(:)&
+            -VNT(:)*(NE*VALPHAI(:)+1D0+1D0/(NE*VALPHAII(:)))**(-2D0)&
+            *(DNE*VALPHAI(:)+NE*VDALPHAI(:)-(DNE*VALPHAII(:)+NE*VDALPHAII(:))&
+            /(NE**2D0*VALPHAII(:)**2D0))
+       !
+       VDNIII(:)=VDNT(:)*VNIII(:)/VNT(:)&
+            -VNT(:)*(1D0+NE*VALPHAII(:)*(NE*VALPHAI(:)+1D0))**(-2D0)&
+            *(2D0*NE*DNE*VALPHAI(:)*VALPHAII(:)+NE**2D0*VDALPHAII(:)*VALPHAI(:)&
+            +NE**2D0*VALPHAII(:)*VDALPHAI(:)+DNE*VALPHAII(:)+NE*VDALPHAII(:))
+       !
+    ENDIF
+    !----
+    !
+  END SUBROUTINE SHORT_ION_CALC_TEMPRHO
+  !
+  !------------------------------------------------
+  !
+  !
+  !------------------------------------------------
+  !
   SUBROUTINE ION_CALC_TEMPRHO(I,TEMP,NE,DNE,N,NI,NII,NIII,DNI,DNII,DNIII)
     !
     ! Input
@@ -1519,22 +1762,22 @@ MODULE CHEMICAL_EQUILIBRIUM
        !--------------------
        DALPHAI=ALPHAI*(DUI-DUII+DLAMELEC+DEXPOI)
        DALPHAII=ALPHAII*(DUII-DUIII+DLAMELEC+DEXPOII)
-       !
-       DNI=DN*NI/N&
-            -N*(1D0+(1D0/(NE*ALPHAI))*(1D0+1D0/(NE*ALPHAII)))**(-2D0)&
-            *(1D0/(NE**2D0*ALPHAI))*((-1D0/ALPHAI)*(DNE*ALPHAI+NE*DALPHAI)&
-            *(1D0+1D0/(NE*ALPHAII))-(1D0/(NE*ALPHAII**2D0))&
-            *(DNE*ALPHAII+NE*DALPHAII))
-       !
-       DNII=DN*NII/N&
-            -N*(NE*ALPHAI+1D0+1D0/(NE*ALPHAII))**(-2D0)&
-            *(DNE*ALPHAI+NE*DALPHAI-(DNE*ALPHAII+NE*DALPHAII)&
-            /(NE**2D0*ALPHAII**2D0))
-       !
-       DNIII=DN*NIII/N&
-            -N*(1D0+NE*ALPHAII*(NE*ALPHAI+1D0))**(-2D0)&
-            *(2D0*NE*DNE*ALPHAI*ALPHAII+NE**2D0*DALPHAII*ALPHAI&
-            +NE**2D0*ALPHAII*DALPHAI+DNE*ALPHAII+NE*DALPHAII)
+!!!!!!!!!!       !
+!!!!!!!!!!       DNI=DN*NI/N&
+!!!!!!!!!!            -N*(1D0+(1D0/(NE*ALPHAI))*(1D0+1D0/(NE*ALPHAII)))**(-2D0)&
+!!!!!!!!!!            *(1D0/(NE**2D0*ALPHAI))*((-1D0/ALPHAI)*(DNE*ALPHAI+NE*DALPHAI)&
+!!!!!!!!!!            *(1D0+1D0/(NE*ALPHAII))-(1D0/(NE*ALPHAII**2D0))&
+!!!!!!!!!!            *(DNE*ALPHAII+NE*DALPHAII))
+!!!!!!!!!!       !
+!!!!!!!!!!       DNII=DN*NII/N&
+!!!!!!!!!!            -N*(NE*ALPHAI+1D0+1D0/(NE*ALPHAII))**(-2D0)&
+!!!!!!!!!!            *(DNE*ALPHAI+NE*DALPHAI-(DNE*ALPHAII+NE*DALPHAII)&
+!!!!!!!!!!            /(NE**2D0*ALPHAII**2D0))
+!!!!!!!!!!       !
+!!!!!!!!!!       DNIII=DN*NIII/N&
+!!!!!!!!!!            -N*(1D0+NE*ALPHAII*(NE*ALPHAI+1D0))**(-2D0)&
+!!!!!!!!!!            *(2D0*NE*DNE*ALPHAI*ALPHAII+NE**2D0*DALPHAII*ALPHAI&
+!!!!!!!!!!            +NE**2D0*ALPHAII*DALPHAI+DNE*ALPHAII+NE*DALPHAII)
        !
     ENDIF
     !----
@@ -1766,7 +2009,6 @@ MODULE CHEMICAL_EQUILIBRIUM
     REAL(DP), INTENT(IN)              :: NELEC
     REAL(DP), INTENT(INOUT), OPTIONAL   :: DNHDT_P,DNHDT_R
     ! Internal
-    !REAL(DP)                          :: NELEC
     REAL(DP)                          :: T8, P8, D8, M8
     !
     T8=DBLE(T)
@@ -1785,10 +2027,11 @@ MODULE CHEMICAL_EQUILIBRIUM
     ! Derivative of ne with repect to RHO at constant temperature
     CALL GET_NE_DNEDRHO_TEMP_NIT(T8,D8,NELEC)
     !
-! .TO BE REMOVED
+    ! Derivative of ne with repect to T at constant gas pressure
+    CALL GET_DNE_PG(T8,P8,NELEC)
+    !
     ! Derivative of NHYD with repect to T at constant gas pressure
     DNHYDDTEMP_PG=(-1D0/DENO_SA)*(P8/(KBOL*T8**2D0)+DNELECDTEMP_PG)
-! TO BE REMOVED.
     ! Derivative of NHYD with repect to T at constant density
     DNHYDDTEMP_RHO=(-MELE/DENO_SAM)*DNELECDTEMP_RHO
     ! Derivative of NHYD with repect to RHO at constant temperature
@@ -1797,8 +2040,346 @@ MODULE CHEMICAL_EQUILIBRIUM
        DNHDT_P=DNHYDDTEMP_PG
        DNHDT_R=DNHYDDTEMP_RHO
     ENDIF
+
+
+!!!!!!!CALL CHECK_DNHYDDTEMP(T,P,D,M,NELEC)
+
+
+
     !
   END SUBROUTINE GET_DNHYDDTEMP
+
+
+
+
+
+
+  !
+  !------------------------------------------------
+  !
+  SUBROUTINE GET_DNE_PG(TEMP,PGAS,NE)
+    ! Determines the electron pressure and its derivative with respect to T
+    ! at constant gas pressure: DNELECDTEMP_PG
+    ! ABOVE SUBROUTINE ASSUMES DNh=0 YET, IT IS NOT
+    !
+    ! Input
+    REAL(DP), INTENT(IN)                  :: TEMP, PGAS, NE
+    ! Internal
+    INTEGER                               :: J, ITER
+    REAL(DP)                              :: NH, DERROR
+    REAL(DP)                              :: DNELEC_EST 
+    REAL(DP)                              :: DNELEC_NEW 
+    REAL(DP)                              :: DNELEC_OLD
+    REAL(DP)                              :: NT, NTI, NTII, NTIII, DNTI&
+        , DNTII, DNTIII
+    !
+    ! Estimate number of hydrogen atoms per cm^3
+    NH=(PGAS-NE*KBOL*TEMP)/(KBOL*TEMP*DENO_SA)
+    !
+    DNELEC_OLD=0D0
+    DNELEC_NEW=0D0
+    ITER=0
+    DERROR=1.0D20
+    DO WHILE (DERROR.GT.1D-6.AND.ITER.LE.100)
+       !
+       DNELEC_OLD = DNELEC_NEW
+       !
+       DNELEC_EST=0D0
+       ! Initialize arrays
+       NT=0D0
+       NTI=0D0
+       NTII=0D0
+       NTIII=0D0
+       DNTI=0D0
+       DNTII=0D0
+       DNTIII=0D0
+       ! Loop through all elements
+       DO J=1,NELEM
+          !
+          NT=NH*10D0**(ABUND(J)-12D0)
+          ! Calculate neutrals, single ionized and double ionized atoms
+          ! of specie J
+          CALL ION_CALC_TEMPPGAS(J,TEMP,PGAS,NE,DNELEC_NEW,NT&
+              ,NTI,NTII,NTIII,DNTI,DNTII,DNTIII)
+          ! In the case of hydrogen (J=1) NTI corresponds to H-
+          ! (electron capture)
+          IF (J.GT.1) THEN
+             DNELEC_EST=DNELEC_EST+DNTII+DNTIII
+          ENDIF
+          IF (J.EQ.1) THEN
+             DNELEC_EST=DNELEC_EST-DNTI+DNTIII
+          ENDIF
+       ENDDO
+       !
+       DNELEC_NEW=(DNELEC_EST+DNELEC_OLD)/2D0
+       DERROR=ABS((DNELEC_NEW-DNELEC_OLD)/DNELEC_NEW)
+       !
+       ITER = ITER + 1
+       !
+    ENDDO
+    !
+    !
+    ! Above calculation for Ne is NOT the one with the new dne:
+    ! we repeat an additional iteration to make them consistent
+
+    DNELEC_EST=0.0D0
+    NT=0D0
+    NTI=0D0
+    NTII=0D0
+    NTIII=0D0
+    DNTI=0D0
+    DNTII=0D0
+    DNTIII=0D0
+    ! Loop through all elements
+    DO J=1,NELEM
+       !
+       NT=NH*10D0**(ABUND(J)-12D0)
+       ! Calculate neutrals, single ionized and double ionized atoms 
+       ! of specie J
+       CALL ION_CALC_TEMPPGAS(J,TEMP,PGAS,NE,DNELEC_NEW&
+           ,NT,NTI,NTII,NTIII,DNTI,DNTII,DNTIII)
+       ! In the case of hydrogen (J=1) NTI corresponds to H-
+       ! (electron capture)
+       IF (J.GT.1) THEN
+          DNELEC_EST=DNELEC_EST+DNTII+DNTIII
+       ENDIF
+       IF (J.EQ.1) THEN
+          DNELEC_EST=DNELEC_EST-DNTI+DNTIII
+       ENDIF
+    ENDDO
+    !
+    DNELECDTEMP_PG=DNELEC_EST
+    !
+  END SUBROUTINE GET_DNE_PG
+  !
+  !------------------------------------------------
+  !
+
+
+
+
+
+
+  !
+  SUBROUTINE CHECK_DNHYDDTEMP(T,P,D,M,NE)
+    !
+    REAL(SP), INTENT(IN)              :: T, P, D, M
+    REAL(DP), INTENT(IN)              :: NE
+    ! Internal
+    REAL(DP)                          :: T8, P8, D8, M8
+    REAL(DP)                          :: N1, N2, D1, D2
+    REAL(DP) :: NHYD,PATOM,PELEC,DENS,MOLECW,NELEC,DNE
+    !
+    T8=DBLE(T)
+    D8=DBLE(D)
+    P8=DBLE(P)
+    M8=DBLE(M)
+    NELEC=NE
+    !
+    ! This gives the derivative of ne with respect to PG at constant temperature
+    !
+    CALL GET_NE_TEMP_SNE_ALT(T8, P8, NELEC)
+
+
+D1=P8*1.01
+    NELEC=NE
+CALL GET_RHO(T8,D1,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
+PRINT*, T8
+N1=NHYD
+
+D2=P8*0.99
+    NELEC=NE
+CALL GET_RHO(T8,D2,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
+PRINT*, T8
+N2=NHYD
+
+PRINT*, ' * DNHYDDPG_TEMP * '
+PRINT*, '     Analytical:', DNHYDDPG_TEMP
+PRINT*, '      Numerical:', (N1-N2)/(D1-D2)
+print*, '-------------------------------------------------'
+
+
+
+D1=P8*1.01
+    NELEC=NE
+CALL GET_RHO(T8,D1,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
+PRINT*, T8
+N1=NELEC
+    
+D2=P8*0.99
+    NELEC=NE
+CALL GET_RHO(T8,D2,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
+PRINT*, T8
+N2=NELEC
+
+PRINT*, ' * DNELECDPG_TEMP * '
+PRINT*, '     Analytical:', DNELECDPG_TEMP
+PRINT*, '      Numerical:', (N1-N2)/(D1-D2)
+print*, '-------------------------------------------------'
+
+
+
+    !
+    ! Now the derivative of ne with respect to T at constant density
+    !
+    NELEC=NE
+    CALL GET_NE_RHO_NIT(T8, D8, NELEC)
+
+!!!!!!
+!!!!!!DNELECDTEMP_RHO=DNELEC
+!!!!!!
+
+D1=T8*1.01
+    NELEC=NE
+CALL GET_PG(D1,D8,NHYD,NELEC,PATOM,PELEC,MOLECW)
+PRINT*, D8
+N1=NELEC
+    
+D2=T8*0.99
+    NELEC=NE
+CALL GET_PG(D2,D8,NHYD,NELEC,PATOM,PELEC,MOLECW)
+PRINT*, D8
+N2=NELEC
+
+PRINT*, ' * DNELECDTEMP_RHO * '
+PRINT*, '     Analytical:', DNELECDTEMP_RHO
+PRINT*, '      Numerical:', (N1-N2)/(D1-D2)
+print*, '-------------------------------------------------'
+
+
+    !
+    ! Derivative of ne with repect to RHO at constant temperature
+    NELEC=NE
+    CALL GET_NE_DNEDRHO_TEMP_NIT(T8,D8,NELEC)
+
+
+D1=D8*1.01
+    NELEC=NE
+CALL GET_PG(T8,D1,NHYD,NELEC,PATOM,PELEC,MOLECW)
+PRINT*, T8
+N1=NHYD
+
+D2=D8*0.99
+    NELEC=NE
+CALL GET_PG(T8,D2,NHYD,NELEC,PATOM,PELEC,MOLECW)
+PRINT*, T8
+N2=NHYD
+
+PRINT*, ' * DNHYDDRHO_TEMP * '
+PRINT*, '     Analytical:', DNHYDDRHO_TEMP
+PRINT*, '      Numerical:', (N1-N2)/(D1-D2)
+print*, '-------------------------------------------------'
+
+
+
+
+D1=D8*1.01
+    NELEC=NE
+CALL GET_PG(T8,D1,NHYD,NELEC,PATOM,PELEC,MOLECW)
+PRINT*, T8
+N1=NELEC
+
+D2=D8*0.99
+    NELEC=NE
+CALL GET_PG(T8,D2,NHYD,NELEC,PATOM,PELEC,MOLECW)
+PRINT*, T8
+N2=NELEC
+
+PRINT*, ' * DNELECDRHO_TEMP * '
+PRINT*, '     Analytical:', DNELECDRHO_TEMP
+PRINT*, '      Numerical:', (N1-N2)/(D1-D2)
+print*, '-------------------------------------------------'
+
+
+    NELEC=NE
+    CALL GET_DNE_PG(T8,P8,NELEC)
+
+    !
+! .TO BE REMOVED
+    ! Derivative of NHYD with repect to T at constant gas pressure
+    DNHYDDTEMP_PG=(-1D0/DENO_SA)*(P8/(KBOL*T8**2D0)+DNELECDTEMP_PG)
+! TO BE REMOVED.
+    ! Derivative of NHYD with repect to T at constant density
+    DNHYDDTEMP_RHO=(-MELE/DENO_SAM)*DNELECDTEMP_RHO
+
+
+
+D1=T8*1.01
+    NELEC=NE
+CALL GET_RHO(D1,P8,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
+PRINT*, P8
+N1=NELEC
+    
+D2=T8*0.99
+    NELEC=NE
+CALL GET_RHO(D2,P8,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
+PRINT*, P8
+N2=NELEC
+
+PRINT*, ' * DNELECDTEMP_PG * '
+PRINT*, '     Analytical:', DNELECDTEMP_PG
+PRINT*, '      Numerical:', (N1-N2)/(D1-D2)
+print*, '-------------------------------------------------'
+
+
+
+
+
+D1=T8*1.01
+    NELEC=NE
+CALL GET_RHO(D1,P8,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
+PRINT*, P8
+N1=NHYD
+    
+D2=T8*0.99
+    NELEC=NE
+CALL GET_RHO(D2,P8,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
+PRINT*, P8
+N2=NHYD
+
+PRINT*, ' * DNHYDDTEMP_PG * '
+PRINT*, '     Analytical:', DNHYDDTEMP_PG
+PRINT*, '      Numerical:', (N1-N2)/(D1-D2)
+print*, '-------------------------------------------------'
+
+
+
+
+D1=T8*1.01
+    NELEC=NE
+CALL GET_PG(D1,D8,NHYD,NELEC,PATOM,PELEC,MOLECW)
+PRINT*, D8
+N1=NHYD
+    
+D2=T8*0.99
+    NELEC=NE
+CALL GET_PG(D2,D8,NHYD,NELEC,PATOM,PELEC,MOLECW)
+PRINT*, D8
+N2=NHYD
+
+PRINT*, ' * DNHYDDTEMP_RHO * '
+PRINT*, '     Analytical:', DNHYDDTEMP_RHO
+PRINT*, '      Numerical:', (N1-N2)/(D1-D2)
+print*, '-------------------------------------------------'
+
+
+
+
+
+
+
+STOP
+STOP
+STOP
+STOP
+STOP
+STOP
+STOP
+STOP
+
+
+
+  END SUBROUTINE CHECK_DNHYDDTEMP
   !
   !------------------------------------------------
   !
@@ -1824,6 +2405,7 @@ MODULE CHEMICAL_EQUILIBRIUM
     IF (INV_ATMPAR(3).EQV..FALSE.) THEN
       CALL GET_RHO(T8,P8,NH,NE,PATOM,PELEC,D8,MU8)
       D=REAL(D8)
+!PRINT*, T8,P8,D8,D
     ELSE IF (INV_ATMPAR(2).EQV..FALSE.) THEN
       CALL GET_PG(T8,D8,NH,NE,PATOM,PELEC,MU8)
       P=REAL(PATOM+PELEC)

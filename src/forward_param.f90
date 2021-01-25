@@ -38,6 +38,8 @@ MODULE FORWARD_PARAM
   LOGICAL, PUBLIC                               :: HYDRO_TOP
   !
   REAL(DP), PUBLIC,   ALLOCATABLE               :: LSF_SIGMA(:), LSF_W0(:), LSF_KERNEL(:)
+  CHARACTER*800, PUBLIC, ALLOCATABLE            :: LSF_FILE(:)
+  LOGICAL, PUBLIC, ALLOCATABLE, DIMENSION(:)    :: LSF_VALID
   !
   LOGICAL, PUBLIC                               :: FULL_STOKES
   !

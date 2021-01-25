@@ -126,16 +126,16 @@ MODULE ATOM_DATABASE
     REAL(DP),   INTENT(OUT)               :: DUI, DUII, DUIII
     REAL(DP)                              :: X, Y, DX
     !
-    UI=0.
-    UII=0.
-    UIII=0.
-    DUI=0.
-    DUII=0.
-    DUIII=0.
+    UI=0.0D0
+    UII=0.0D0
+    UIII=0.0D0
+    DUI=0.0D0
+    DUII=0.0D0
+    DUIII=0.0D0
     !
-    X=DLOG(5040./T)
-    Y=1E-3*T
-    DX=-1./T
+    X=DLOG(5040.0D0/T)
+    Y=1.0D-3*T
+    DX=-1.0D0/T
     !
     SELECT CASE (INDEX)
        CASE(1)

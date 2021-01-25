@@ -3,7 +3,9 @@ MODULE USER_MPI
   !
   !================================================
   !
-  USE mpi
+  !USE mpi
+  use mpi_f08
+
   !
   IMPLICIT NONE
   !
@@ -13,14 +15,21 @@ MODULE USER_MPI
   !
   !MPI3  TYPE(MPI_REQUEST)   :: mpi__request2, mpi__request3
   !MPI3  TYPE(MPI_STATUS)    :: mpi__status
-  INTEGER, PUBLIC,DIMENSION(MPI_STATUS_SIZE)    :: mpi__status
+!!  INTEGER, PUBLIC,DIMENSION(MPI_STATUS_SIZE)    :: mpi__status
+    type(mpi_request)   :: mpi__request
+    type(mpi_request), dimension(:), allocatable   :: mpi__vrequest
+    type(mpi_status)    :: mpi__status
   !
   PUBLIC :: MPI_COMM_WORLD
   PUBLIC :: MPI_DOUBLE_PRECISION
   PUBLIC :: MPI_REAL
+  PUBLIC :: MPI_CHARACTER
   PUBLIC :: MPI_INTEGER
   PUBLIC :: MPI_LOGICAL
   PUBLIC :: START_MPI, END_MPI, NICE_WAITING
+  PUBLIC :: keep_workers_waiting, mpi__status
+  PUBLIC :: mpi__request
+  PUBLIC :: mpi__vrequest
   PRIVATE
   !
   !************************************************
@@ -60,6 +69,51 @@ MODULE USER_MPI
     ENDDO
     !
   END SUBROUTINE NICE_WAITING
+  !
+  !------------------------------------------------
+  !
+
+  subroutine slow_waiting(sou, tagn)
+    !
+    integer, intent(in)  :: sou, tagn
+    !
+    logical        :: ready
+    !
+    ready=.false.
+    do while (ready.eqv..false.)
+      !call sleep(1)
+#ifdef __intel_compiler
+      call system('sleep 0.01s')
+#else
+      call execute_command_line('sleep 0.01s')
+#endif
+      call mpi_iprobe(sou, tagn,mpi_comm_world,ready,mpi__status,mpi__ierror)
+    enddo
+    !
+  end subroutine slow_waiting
+
+  subroutine keep_workers_waiting()
+
+    integer :: msg, i
+
+    if (mpi__myrank.eq.0) then
+
+      do i=1,mpi__size-1
+        call mpi_isend(msg, 1, mpi_real, i, i, mpi_comm_world &
+            , mpi__request,mpi__ierror)
+      enddo
+      call mpi_wait(mpi__request, mpi__status, mpi__ierror)
+
+    else ! Master. Workers:
+
+      call slow_waiting(0, mpi__myrank)
+      call mpi_recv(msg,1,mpi_real,0,mpi__myrank &
+          ,mpi_comm_world,mpi__status,mpi__ierror)
+    endif
+
+  end subroutine keep_workers_waiting
+
+
   !
   !------------------------------------------------
   !

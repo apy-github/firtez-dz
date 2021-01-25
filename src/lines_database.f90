@@ -14,8 +14,11 @@ MODULE LINES_DATABASE
   !
   REAL(DP), ALLOCATABLE, PRIVATE   :: ELOWLIM(:), EUPPLIM(:)
   !
+  CHARACTER*800, ALLOCATABLE, DIMENSION(:)    :: LDBASE_READ_LINES
+  !
   PUBLIC :: INIT_LINEDATABASE_VARS
-  PUBLIC :: READ_LINES_DATABASE
+  !PUBLIC :: READ_LINES_DATABASE
+  PUBLIC :: NREAD_LINES_DATABASE
   PUBLIC :: FINI_LINEDATABASE_VARS
   PUBLIC :: NCOLUMNS
   !
@@ -378,11 +381,12 @@ MODULE LINES_DATABASE
   !
   !------------------------------------------------
   !
-  SUBROUTINE READ_LINES_DATABASE
+  SUBROUTINE NREAD_LINES_DATABASE
     !
     USE LOG
     USE DAMPING, ONLY: GET_NEFF, GET_COLLISIONAL_PARAM
     USE CODE_MODES, ONLY: LINEPATH
+    USE user_mpi, ONLY: mpi__ierror, mpi_character, mpi_comm_world, mpi_integer
     !
     IMPLICIT NONE
     INTEGER                                     :: I, NL, IERR, FLAG
@@ -396,42 +400,81 @@ MODULE LINES_DATABASE
     !
     ! Does lines_database exist ?
     !
-    OPEN(UNIT=1, FILE=TRIM(LINEPATH)//'lines_database.dat' &
-        , STATUS='OLD', IOSTAT=IERR, FORM='FORMATTED')
-    IF (IERR.NE.0) THEN
-PRINT*, TRIM(LINEPATH)
-       PRINT*,'The file containing database about spectral lines (lines_database.dat)'
-       PRINT*,'could not be fonud in the directory of the source code. STOP'
-       CLOSE(UNIT=1)
-       STOP
+    IF (mpi__myrank.eq.0) THEN
+      !
+      OPEN(UNIT=1, FILE=TRIM(LINEPATH)//'lines_database.dat' &
+          , STATUS='OLD', IOSTAT=IERR, FORM='FORMATTED')
+      IF (IERR.NE.0) THEN
+  PRINT*, TRIM(LINEPATH)
+         PRINT*,'The file containing database about spectral lines (lines_database.dat)'
+         PRINT*,'could not be fonud in the directory of the source code. STOP'
+         CLOSE(UNIT=1)
+         STOP
+      ENDIF
+      !
+      ! Determine number of lines inside
+      !
+      NL=0
+      IERR=0 ! reset ierr
+      DO WHILE (IERR.EQ.0)
+         READ(UNIT=1, FMT='(A)', IOSTAT=IERR) READLINE
+         IF (IERR.EQ.0) NL=NL+1
+         IF (IERR.NE.0) EXIT
+      ENDDO
+      CLOSE(1)
+      NUML_DATABASE=NL-1
+
+      CALL MPI_BCAST(NUML_DATABASE, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi__ierror)
+      ALLOCATE(LDBASE_READ_LINES(NUML_DATABASE))
+
+      ! Read the file:
+      OPEN(UNIT=1, FILE=TRIM(LINEPATH)//'lines_database.dat' &
+          , STATUS='OLD', IOSTAT=IERR, FORM='FORMATTED')
+      DO I=1,NUML_DATABASE
+         !
+         FLAG = 0
+         IERR = 0
+         !
+         READ(UNIT=1, FMT='(A)', IOSTAT=IERR) LDBASE_READ_LINES(I)
+      ENDDO
+
+      READ(UNIT=1,FMT='(A)', IOSTAT=IERR) FIN
+      IF (TRIM(FIN).NE.'END') THEN
+         PRINT*, TRIM(FIN)
+         PRINT*,'File lines_database.dat could not be properly read. Check format. STOP'
+         STOP
+      ENDIF
+      CLOSE(1)
+      !
+      ! Broadcast info:
+      ! 1 byte per character -> use sizeof
+      CALL MPI_BCAST(LDBASE_READ_LINES, SIZEOF(LDBASE_READ_LINES), MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi__ierror)
+
+    ELSE
+      ! Workers:
+      CALL MPI_BCAST(NUML_DATABASE, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi__ierror)
+      ALLOCATE(LDBASE_READ_LINES(NUML_DATABASE))
+      !
+      ! 1 byte per character -> use sizeof
+      CALL MPI_BCAST(LDBASE_READ_LINES, SIZEOF(LDBASE_READ_LINES), MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi__ierror)
+
     ENDIF
-    !
-    ! Determine number of lines inside
-    !
-    NL=0
-    IERR=0 ! reset ierr
-    DO WHILE (IERR.EQ.0)
-       READ(UNIT=1, FMT='(A)', IOSTAT=IERR) READLINE
-       IF (IERR.EQ.0) NL=NL+1
-       IF (IERR.NE.0) EXIT
-    ENDDO
-    CLOSE(1)
-    NUML_DATABASE=NL-1
     !
     ! Read atomic data
     ! 
-    CALL INIT_LINEDATABASE_VARS(NL)
+    CALL INIT_LINEDATABASE_VARS(NUML_DATABASE)
     !
-    OPEN(UNIT=1, FILE=TRIM(LINEPATH)//'lines_database.dat' &
-        , STATUS='OLD', IOSTAT=IERR, FORM='FORMATTED')
-    DO I=1,NL-1
+!    OPEN(UNIT=1, FILE=TRIM(LINEPATH)//'lines_database.dat' &
+!        , STATUS='OLD', IOSTAT=IERR, FORM='FORMATTED')
+    DO I=1,NUML_DATABASE
        !
        FLAG = 0
        IERR = 0
        !
-       READ(UNIT=1, FMT='(A)', IOSTAT=IERR) READLINE
+       !READ(UNIT=1, FMT='(A)', IOSTAT=IERR) READLINE
+       READLINE=LDBASE_READ_LINES(I)
        NCOL=NCOLUMNS(READLINE)
-       !PRINT*, I, NCOL
+       !PRINT*, I, NCOL, TRIM(READLINE)
        IF((NCOL.NE.13).AND.(NCOL.NE.8)) THEN
          PRINT*, I, NCOL, READLINE
          PRINT*,'WRONG lines_database.dat FORMAT!!!'
@@ -455,9 +498,11 @@ PRINT*, TRIM(LINEPATH)
        !----------------------------------------
        ! Case 1: parameters provided in lines_database.dat
        IF (ALPHA(I) .NE.0 .AND. SIGMA(I) .NE. 0) THEN
-          CALL LOGW_CHAR_REAL('Collisional parameters provided by user for ',LINE_L0(I))
-          CALL LOGW_CHAR_REAL('Collisional cross section is ',SIGMA(I))
-          CALL LOGW_CHAR_REAL('Temperature parameter is ',ALPHA(I))
+          IF (mpi__myrank.eq.0) THEN
+            CALL LOGW_CHAR_REAL('Collisional parameters provided by user for ',LINE_L0(I))
+            CALL LOGW_CHAR_REAL('Collisional cross section is ',SIGMA(I))
+            CALL LOGW_CHAR_REAL('Temperature parameter is ',ALPHA(I))
+          ENDIF
        ENDIF
        ! Case 2: parameters not provided by lines_database.dat
        ! but transition of the optical electron is available
@@ -478,37 +523,174 @@ PRINT*, TRIM(LINEPATH)
           CALL GET_COLLISIONAL_PARAM(NLOW_EFF,NUPP_EFF,OETRANSITION(I,:) &
               ,SIGMA(I),ALPHA(I),IERR)
           ! Check for errors:
-          IF (IERR .NE. 0) CALL LOGW_CHAR_REAL( &
-              'Collisional parameters not available for ',LINE_L0(I))
-          IF (IERR .EQ. 1) CALL LOGW_CHAR_CHAR( &
-              SHELL,'transition does not have tabulated tables.')
-          IF (IERR .EQ. 2) CALL LOGW_CHAR_REAL( &
-              'Lower effective quantum number is outside tables ',NLOW_EFF)
-          IF (IERR .EQ. 3) CALL LOGW_CHAR_REAL( &
-              'Upper effective quantum number is outside tables ',NUPP_EFF)
-          IF (IERR .EQ. 0) THEN
-             CALL LOGW_CHAR_REAL('Collisional parameters interpolated for ',LINE_L0(I))
-             CALL LOGW_CHAR_REAL('Collisional cross section is ',SIGMA(I))
-             CALL LOGW_CHAR_REAL('Temperature parameter is ',ALPHA(I))
+
+          IF (mpi__myrank.eq.0) THEN
+            IF (IERR .NE. 0) CALL LOGW_CHAR_REAL( &
+                'Collisional parameters not available for ',LINE_L0(I))
+            IF (IERR .EQ. 1) CALL LOGW_CHAR_CHAR( &
+                SHELL,'transition does not have tabulated tables.')
+            IF (IERR .EQ. 2) CALL LOGW_CHAR_REAL( &
+                'Lower effective quantum number is outside tables ',NLOW_EFF)
+            IF (IERR .EQ. 3) CALL LOGW_CHAR_REAL( &
+                'Upper effective quantum number is outside tables ',NUPP_EFF)
+            IF (IERR .EQ. 0) THEN
+               CALL LOGW_CHAR_REAL('Collisional parameters interpolated for ',LINE_L0(I))
+               CALL LOGW_CHAR_REAL('Collisional cross section is ',SIGMA(I))
+               CALL LOGW_CHAR_REAL('Temperature parameter is ',ALPHA(I))
+            ENDIF
           ENDIF
        ENDIF
        ! Case 3: parameters not provided by lines_database.dat
        ! and transition of the optical electron is not available
        IF ( (ALPHA(I) .EQ. 0D0 .OR. SIGMA(I).EQ.0D0) .AND. (FLAG .NE.0)) THEN
-          CALL LOGW_CHAR_REAL('Collisional parameters not available for ',LINE_L0(I))
-          CALL LOGW_CHAR('For this line we will use Van der Waals broadening')
+          IF (mpi__myrank.eq.0) THEN
+            CALL LOGW_CHAR_REAL('Collisional parameters not available for ',LINE_L0(I))
+            CALL LOGW_CHAR('For this line we will use Van der Waals broadening')
+          ENDIF
        ENDIF
     ENDDO
     !
-    READ(UNIT=1,FMT='(A)', IOSTAT=IERR) FIN
-    IF (TRIM(FIN).NE.'END') THEN
-       PRINT*,'File lines_database.dat could not be properly read. Check format. STOP'
-       STOP
+    IF (mpi__myrank.eq.0) THEN
+      CALL LOGW_CHAR('File containing database of spectral lines (lines_database.dat) has been correctly read.')
     ENDIF
-    CLOSE(1)
-    CALL LOGW_CHAR('File containing database of spectral lines (lines_database.dat) has been correctly read.')
+    DEALLOCATE(LDBASE_READ_LINES)
+
     !-------------------------------------
-  END SUBROUTINE READ_LINES_DATABASE
+  END SUBROUTINE NREAD_LINES_DATABASE
+  !
+  !------------------------------------------------
+  !
+!!!!  SUBROUTINE READ_LINES_DATABASE
+!!!!    !
+!!!!    USE LOG
+!!!!    USE DAMPING, ONLY: GET_NEFF, GET_COLLISIONAL_PARAM
+!!!!    USE CODE_MODES, ONLY: LINEPATH
+!!!!    !
+!!!!    IMPLICIT NONE
+!!!!    INTEGER                                     :: I, NL, IERR, FLAG
+!!!!    CHARACTER*2                                 :: SHELL
+!!!!    CHARACTER*7                                 :: LOW, UPP
+!!!!    CHARACTER*100                               :: FIN
+!!!!    REAL(DP)                                    :: NLOW_EFF, NUPP_EFF
+!!!!    !
+!!!!    INTEGER                                     :: NCOL
+!!!!    CHARACTER*800                               :: READLINE
+!!!!    !
+!!!!    ! Does lines_database exist ?
+!!!!    !
+!!!!    OPEN(UNIT=1, FILE=TRIM(LINEPATH)//'lines_database.dat' &
+!!!!        , STATUS='OLD', IOSTAT=IERR, FORM='FORMATTED')
+!!!!    IF (IERR.NE.0) THEN
+!!!!PRINT*, TRIM(LINEPATH)
+!!!!       PRINT*,'The file containing database about spectral lines (lines_database.dat)'
+!!!!       PRINT*,'could not be fonud in the directory of the source code. STOP'
+!!!!       CLOSE(UNIT=1)
+!!!!       STOP
+!!!!    ENDIF
+!!!!    !
+!!!!    ! Determine number of lines inside
+!!!!    !
+!!!!    NL=0
+!!!!    IERR=0 ! reset ierr
+!!!!    DO WHILE (IERR.EQ.0)
+!!!!       READ(UNIT=1, FMT='(A)', IOSTAT=IERR) READLINE
+!!!!       IF (IERR.EQ.0) NL=NL+1
+!!!!       IF (IERR.NE.0) EXIT
+!!!!    ENDDO
+!!!!    CLOSE(1)
+!!!!    NUML_DATABASE=NL-1
+!!!!    !
+!!!!    ! Read atomic data
+!!!!    ! 
+!!!!    CALL INIT_LINEDATABASE_VARS(NL)
+!!!!    !
+!!!!    OPEN(UNIT=1, FILE=TRIM(LINEPATH)//'lines_database.dat' &
+!!!!        , STATUS='OLD', IOSTAT=IERR, FORM='FORMATTED')
+!!!!    DO I=1,NL-1
+!!!!       !
+!!!!       FLAG = 0
+!!!!       IERR = 0
+!!!!       !
+!!!!       READ(UNIT=1, FMT='(A)', IOSTAT=IERR) READLINE
+!!!!       NCOL=NCOLUMNS(READLINE)
+!!!!       !PRINT*, I, NCOL
+!!!!       IF((NCOL.NE.13).AND.(NCOL.NE.8)) THEN
+!!!!         PRINT*, I, NCOL, READLINE
+!!!!         PRINT*,'WRONG lines_database.dat FORMAT!!!'
+!!!!         PRINT*,'STOPPING!!!'
+!!!!         STOP
+!!!!       ENDIF
+!!!!       CALL READ_LINESDATABASE_ROW(READLINE, I, NCOL, LOW, UPP, SHELL)
+!!!!       !
+!!!!       LINE_POS(I)=I
+!!!!       !
+!!!!       ! Determine SLJ quantum numbers from electronic configuration
+!!!!       !
+!!!!       CALL ELECCONF(LOW,SL(I),LL(I),JL(I))
+!!!!       CALL ELECCONF(UPP,SU(I),LU(I),JU(I))
+!!!!       !
+!!!!       ! Determine the transition type for the optical electron
+!!!!       !
+!!!!       CALL OPTICAL_ELEC_TRAN(SHELL,OETRANSITION(I,:),FLAG)
+!!!!       !----------------------------------------
+!!!!       ! We determine the collisional parameters
+!!!!       !----------------------------------------
+!!!!       ! Case 1: parameters provided in lines_database.dat
+!!!!       IF (ALPHA(I) .NE.0 .AND. SIGMA(I) .NE. 0) THEN
+!!!!          CALL LOGW_CHAR_REAL('Collisional parameters provided by user for ',LINE_L0(I))
+!!!!          CALL LOGW_CHAR_REAL('Collisional cross section is ',SIGMA(I))
+!!!!          CALL LOGW_CHAR_REAL('Temperature parameter is ',ALPHA(I))
+!!!!       ENDIF
+!!!!       ! Case 2: parameters not provided by lines_database.dat
+!!!!       ! but transition of the optical electron is available
+!!!!       ! so we attempt an interpolation from Anstee, Barklem and O'Mara tables
+!!!!       IF ( (ALPHA(I) .EQ. 0D0 .OR. SIGMA(I).EQ.0D0) .AND. (FLAG .EQ.0)) THEN
+!!!!       ! Case 2.1: ALPHA and SIGMA parameters not provided but ELIMS are provided:
+!!!!          IF ( (ALPHA(I) .EQ. 0D0 .OR. SIGMA(I).EQ.0D0) &
+!!!!              .AND. ( ELOWLIM(I) .NE. 0D0 .AND. EUPPLIM(I) .NE. 0D0) ) THEN
+!!!!            CALL GET_NEFF(LINE_ZN(I),EPLOW(I),LINE_L0(I),LINE_ION(I) &
+!!!!                ,NLOW_EFF,NUPP_EFF,ELOWLIM(I),EUPPLIM(I))
+!!!!          ELSE
+!!!!       ! Case 2.2: interpolate without ELIM information, n* are then overestimated
+!!!!             ! Determine effective quantum n numbers
+!!!!             CALL GET_NEFF(LINE_ZN(I),EPLOW(I),LINE_L0(I),LINE_ION(I),NLOW_EFF,NUPP_EFF)
+!!!!          ENDIF
+!!!!
+!!!!          ! Interpolate from tables
+!!!!          CALL GET_COLLISIONAL_PARAM(NLOW_EFF,NUPP_EFF,OETRANSITION(I,:) &
+!!!!              ,SIGMA(I),ALPHA(I),IERR)
+!!!!          ! Check for errors:
+!!!!          IF (IERR .NE. 0) CALL LOGW_CHAR_REAL( &
+!!!!              'Collisional parameters not available for ',LINE_L0(I))
+!!!!          IF (IERR .EQ. 1) CALL LOGW_CHAR_CHAR( &
+!!!!              SHELL,'transition does not have tabulated tables.')
+!!!!          IF (IERR .EQ. 2) CALL LOGW_CHAR_REAL( &
+!!!!              'Lower effective quantum number is outside tables ',NLOW_EFF)
+!!!!          IF (IERR .EQ. 3) CALL LOGW_CHAR_REAL( &
+!!!!              'Upper effective quantum number is outside tables ',NUPP_EFF)
+!!!!          IF (IERR .EQ. 0) THEN
+!!!!             CALL LOGW_CHAR_REAL('Collisional parameters interpolated for ',LINE_L0(I))
+!!!!             CALL LOGW_CHAR_REAL('Collisional cross section is ',SIGMA(I))
+!!!!             CALL LOGW_CHAR_REAL('Temperature parameter is ',ALPHA(I))
+!!!!          ENDIF
+!!!!       ENDIF
+!!!!       ! Case 3: parameters not provided by lines_database.dat
+!!!!       ! and transition of the optical electron is not available
+!!!!       IF ( (ALPHA(I) .EQ. 0D0 .OR. SIGMA(I).EQ.0D0) .AND. (FLAG .NE.0)) THEN
+!!!!          CALL LOGW_CHAR_REAL('Collisional parameters not available for ',LINE_L0(I))
+!!!!          CALL LOGW_CHAR('For this line we will use Van der Waals broadening')
+!!!!       ENDIF
+!!!!    ENDDO
+!!!!    !
+!!!!    READ(UNIT=1,FMT='(A)', IOSTAT=IERR) FIN
+!!!!    IF (TRIM(FIN).NE.'END') THEN
+!!!!       PRINT*,'File lines_database.dat could not be properly read. Check format. STOP'
+!!!!       STOP
+!!!!    ENDIF
+!!!!    CLOSE(1)
+!!!!    CALL LOGW_CHAR('File containing database of spectral lines (lines_database.dat) has been correctly read.')
+!!!!    !-------------------------------------
+!!!!  END SUBROUTINE READ_LINES_DATABASE
   !
   !------------------------------------------------
   !

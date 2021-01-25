@@ -5,13 +5,14 @@ MODULE INVERSION
   !
   USE CODE_MODES, ONLY: TWODSPATIALSPD, COUPLED &
       , MSYNTHESIS, MRESPFUNCT, NAMEMODEL, NAMEPROFILE &
-      , MGETTAU, MINVERSION, MGETHEQ
+      , MGETTAU, MINVERSION, MGETHEQ, VREGULARIZATION
   USE INVERT_PARAM, ONLY: INV_ATMPAR, MAXITER, NFREQ &
       , CURIC, IMASK, AM_I_DONE, INV_MAS, INV_STK &
       , NSTKINV, STOP_CRIT, IFREEP, JACOB, DELTA &
-      , ASSIST_B, ASSIST_T, ASSIST_P, ASSIST_V
+      , ASSIST_B, ASSIST_T, ASSIST_P, ASSIST_V, MAXSTEPS &
+      , SAMPLED_MOD, PENALTY, PEN_RES, PEN_HSS
 
-  USE FORWARD, ONLY: FORWARD3D, UPDATE_BEST_TO_CURRENT
+  USE FORWARD, ONLY: FORWARD3D, UPDATE_BEST_TO_CURRENT, UPDATE_CURRENT_TO_BEST
   USE user_mpi, ONLY: mpi__myrank, mpi__ierror &
       , MPI_INTEGER, MPI_COMM_WORLD, MPI_LOGICAL
   USE MISC, ONLY: WRITE_MODEL, WRITE_PROFILES
@@ -29,6 +30,8 @@ MODULE INVERSION
       ,ALLOCATE_2D_SP,ALLOCATE_3D_DP,ALLOCATE_4D_SP
   !
   IMPLICIT NONE
+  !
+  LOGICAL :: WSET
   !
   !::::::::::::::::::::::::::::::::::::::::::::::::
   !
@@ -57,11 +60,15 @@ MODULE INVERSION
     INTEGER                   :: I
     LOGICAL                   :: STOP_ITERATION!, CRFS
     INTEGER                   :: CRFS
+    INTEGER                   :: IITER
     !
     IF (mpi__myrank.EQ.0) PRINT*, 'INVERSION3D:'
     !
+    WSET=.FALSE.
+    IITER=1
+    IF (VREGULARIZATION) IITER=MAXITER
     ! If we are inverting, maxiter is greater or equal 1
-    DO I=1,MAXITER
+    DO I=IITER,MAXITER
       !
       CALL INITIALIZE_CYCLE(I,STOP_ITERATION,CRFS)
       !
@@ -116,7 +123,7 @@ MODULE INVERSION
     INTEGER, INTENT(INOUT) :: VCRF
     !
     !IF (LOGIC.EQV..FALSE.) THEN
-    IF (MOD(VCRF,4).EQ.0) THEN
+    IF (MOD(VCRF,1).EQ.0) THEN
       CALL FORWARD3D()
       !LOGIC=.FALSE.
     ELSE
@@ -159,7 +166,7 @@ MODULE INVERSION
     !
     USE COUPLED_INVERSION, ONLY: INIT_COUPLED_INVERSION_DYNAMIC_VARS
     USE INVERT_PARAM, ONLY: INU
-    USE EXTEND_2D, ONLY: SMOOTHING
+    USE EXTEND_2D, ONLY: SMOOTHING, SMOOTHING_B
     USE CODE_MODES, ONLY: MSMOOTHING
     !
     INTEGER, INTENT(IN) :: I
@@ -177,7 +184,7 @@ MODULE INVERSION
     ! Update Cycle dimension dependent variables:
     CALL IFREE_VAR_SPACE()
     !
-    INU=NFREQ-IFREEP
+    INU=NFREQ!-IFREEP
     IF (INU.LT.0) THEN
       IF (mpi__myrank.EQ.1) PRINT* &
           , 'Warning: Number of free parameters larger than number of observations!'
@@ -198,9 +205,16 @@ MODULE INVERSION
       CALL ALLOCATE_2D_SP(EQVDSYN, NFREQ, IFREEP, 'ALLOCATE EQVDSYN(I)')
       CALL ALLOCATE_2D_DP(JACOB,NFREQ,IFREEP,'JACOB IN GET_DMODEL')
       CALL ALLOCATE_1D_DP(DELTA,IFREEP,'DELTA IN GET_DMODEL')
+      CALL ALLOCATE_1D_DP(SAMPLED_MOD,IFREEP,'SAMPLED_MOD IN GET_DMODEL')
+      CALL ALLOCATE_1D_DP(PENALTY,IFREEP,'PENALTY IN GET_DMODEL')
+      CALL ALLOCATE_1D_DP(PEN_RES,IFREEP,'PEN_RES IN GET_DMODEL')
+      CALL ALLOCATE_2D_DP(PEN_HSS,IFREEP,IFREEP,'PEN_HSS IN GET_DMODEL')
     ENDIF ! Slaves.
     !
-    IF (CURIC.EQ.1) CALL SET_WEIGHTS()
+    IF (WSET.EQV..FALSE.) THEN
+      CALL SET_WEIGHTS()
+      WSET=.TRUE.
+    ENDIF
     !
     STOP_IT=.TRUE.
     !
@@ -234,17 +248,16 @@ MODULE INVERSION
     !
     CALL SET_TAU(I)
     !
+    CALL UPDATE_CURRENT_TO_BEST()
 MSMOOTHING=.TRUE.
-MSMOOTHING=.FALSE.
+!MSMOOTHING=.FALSE.
 IF (MSMOOTHING.EQV..TRUE.) THEN
-  CALL SMOOTHING()
-  MRESPFUNCT=.FALSE.
+  CALL SMOOTHING_B()
   CALL FORWARD3D()
-  MRESPFUNCT=.TRUE.
 ENDIF
 
     !
-    CALL STORE_CYCLE(I, 'pit_')
+    !CALL STORE_CYCLE(I, 'pit_')
     !
   END SUBROUTINE INITIALIZE_CYCLE
   !
@@ -260,10 +273,10 @@ ENDIF
     !
     AM_I_DONE(:,:)=0
     !
-    PRINT*, 'Update best to current'
+    !PRINT*, 'Update best to current'
     CALL UPDATE_BEST_TO_CURRENT()
     !
-    CALL STORE_CYCLE(I, 'it_')
+    !CALL STORE_CYCLE(I, 'it_')
     !
     ! Here, we already have the final model. As a last step, we calculate the...
     ! ... errors:
@@ -300,6 +313,10 @@ ENDIF
       DEALLOCATE(EQVDSYN)
       DEALLOCATE(JACOB)
       DEALLOCATE(DELTA)
+      DEALLOCATE(SAMPLED_MOD)
+      DEALLOCATE(PENALTY)
+      DEALLOCATE(PEN_RES)
+      DEALLOCATE(PEN_HSS)
     ENDIF
 
     IF (TWODSPATIALSPD.EQV..TRUE.) THEN
@@ -611,22 +628,21 @@ IF (mpi__myrank.EQ.0) PRINT*, '  Assist P:'
         !
         !
         !
-        !
-        HYDRO_TOP=.FALSE.!BU_HYD
-        CALL FORWARD3D()
+        IF ( (ASSIST_T.EQV..TRUE.) .OR. (ASSIST_P.EQV..TRUE.) ) THEN
+          !
+          HYDRO_TOP=.FALSE.!BU_HYD
+          CALL FORWARD3D()
+          !
+        ENDIF
         !
         HYDRO_TOP=BU_HYD
   ! Get profiles
-  PRINT*, 'Get profiles after assistance:'
+  !PRINT*, 'Get profiles after assistance:'
         MSYNTHESIS=.TRUE.
         CALL FORWARD3D()
       ENDIF
 !
       HYDRO_TOP=BU_HYD
-! Get profiles
-PRINT*, 'Get profiles after assistance:'
-      !MSYNTHESIS=.TRUE.
-      !CALL FORWARD3D()
       MSYNTHESIS=BU_SYN
       MINVERSION=BU_INV
       MRESPFUNCT=BU_RFC
@@ -741,11 +757,20 @@ PRINT*, 'Get profiles after assistance:'
       ! Check for bad pixels. If any, replace it by the surrounding atmosphere
       CALL CHECK_CHI2_XY()
       !
+      STOP_CRIT=0
       IF (NX*NY-SUM(AM_I_DONE).EQ.0) THEN
         STOP_CRIT=1
-      ELSE
-        STOP_CRIT=0
-      ENDIF ! Am I already done?
+      ENDIF
+      !IF (SUM(INV_MAS(9,:,:))/(1.D0*NX*NY).GE.1.D3) THEN
+!PRINT*, SUM(INV_MAS(9,:,:)*(1.-AM_I_DONE))/SUM(1.0D0-AM_I_DONE), 'AAAAA'
+      IF (SUM(INV_MAS(9,:,:)*(1.-AM_I_DONE))/SUM(1.0D0-AM_I_DONE).GE.1.D3) THEN
+!PRINT*, SUM(INV_MAS(9,:,:)*(1.-AM_I_DONE))
+!PRINT*, SUM(AM_I_DONE), NX*NY
+        STOP_CRIT=1
+      ENDIF
+      IF (SUM(INV_MAS(1,:,:))/(1.D0*NX*NY).GE.MAXSTEPS) THEN
+        STOP_CRIT=1
+      ENDIF
     ENDIF ! Master
     !
     ! BROADCAST DECISION FROM MASTER TO SLAVES:

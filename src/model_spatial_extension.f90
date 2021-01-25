@@ -18,6 +18,7 @@ MODULE EXTEND_2D
   PUBLIC :: EXTEND_MODEL
   PUBLIC :: SETUP_MASK
   PUBLIC :: SMOOTHING
+  PUBLIC :: SMOOTHING_B
   PRIVATE
   !
   !************************************************
@@ -344,6 +345,150 @@ PRINT*, '*** Smoothing ***'
     DEALLOCATE(FFTSY2D)
     !
   END SUBROUTINE SMOOTHING
+  !
+  !------------------------------------------------
+  !
+  SUBROUTINE SMOOTHING_B()
+    !
+    USE user_mpi, ONLY: mpi__ierror, MPI_COMM_WORLD
+    USE CONS_PARAM, ONLY: DP
+    USE USER_FFTW3, ONLY: FFTS2D, GPLANS2D, FFTSY2D, MAKE_2D_PLAN &
+        , MAKE_2D_IPLAN, FFTW_EXECUTE_DFT_R2C, FFTW_EXECUTE_DFT_C2R
+    USE GRID_PARAM, ONLY: NY, NX, NZ
+    USE PHYS_PARAM
+    USE INVERT_PARAM, ONLY: INV_ATMPAR, CURIC, MAXITER
+    !
+    INTEGER      :: J,K
+    REAL(DP), DIMENSION(NZ,NY,NX) :: ARRAY
+    !
+    INTEGER                    :: I
+    INTEGER                    :: NY2, NX2
+    REAL(DP), DIMENSION(NY,NX) :: X2D, Y2D, SKERNEL
+    REAL(DP)                   :: ESIG, ISIG
+    !
+    NY2=NY/2+1
+    NX2=NX/2+1
+    !
+    X2D(:,:)=0.0D0
+    Y2D(:,:)=0.0D0
+    DO I=1,NY
+      Y2D(I,:)=DBLE(I-NY2)
+    ENDDO
+    DO I=1,NX
+      X2D(:,I)=DBLE(I-NX2)
+    ENDDO
+    !
+    ESIG=3.0D0-2.0D0*DBLE(CURIC)/DBLE(MAXITER)!2.0D0
+!PRINT*, 'Esig: ', ESIG
+    ISIG=0.9D0
+    !
+    SKERNEL(:,:)=0.0D0
+    SKERNEL(:,:)=DEXP(-Y2D**2/(2.0D0*ESIG**2)) &
+        *DEXP(-X2D**2/(2.0D0*ESIG**2))
+!#    SKERNEL(:,:)=SKERNEL(:,:) &
+!#        -(DEXP(-Y2D**2/(2.0D0*ISIG**2)) &
+!#        *DEXP(-X2D**2/(2.0D0*ISIG**2)))
+    !
+    ! Shift:
+    SKERNEL=CSHIFT(SKERNEL,SHIFT=NY2-1,DIM=1)
+    SKERNEL=CSHIFT(SKERNEL,SHIFT=NX2-1,DIM=2)
+    !
+    ! Normalize:
+    SKERNEL=SKERNEL/SUM(SKERNEL)
+    ! Second normalization: (this is due to the factorization of fftw3)
+    SKERNEL=SKERNEL/DBLE(NX)/DBLE(NY)
+    !
+    ALLOCATE(GPLANS2D(2))
+    ALLOCATE(FFTS2D(NY2,NX))
+    ALLOCATE(FFTSY2D(NY2,NX))
+    FFTS2D(:,:)=0.0D0
+    FFTSY2D(:,:)=0.0D0
+    !
+    ! Define a forward plan:
+    CALL MAKE_2D_PLAN(GPLANS2D(1), SHAPE(SKERNEL), SKERNEL, SHAPE(FFTS2D), FFTS2D)
+    ! Define an inverse plan:
+    CALL MAKE_2D_IPLAN(GPLANS2D(2), SHAPE(FFTS2D), FFTS2D, SHAPE(SKERNEL), SKERNEL)
+    !
+    ! Store kernel transformation:
+    CALL FFTW_EXECUTE_DFT_R2C(GPLANS2D(1),SKERNEL,FFTS2D)
+    !
+    !
+    IF (mpi__myrank.EQ.0) THEN
+PRINT*, '*** Smoothing ***'
+      !
+      DO J=1,8
+        !
+        IF (INV_ATMPAR(J).EQV..FALSE.) CYCLE
+        !
+        SELECT CASE (J)
+          CASE(1)
+            ARRAY=DBLE(BEST_TEM3D)
+          CASE(2)
+            ARRAY=DBLE(BEST_PG3D)
+          CASE(3)
+            ARRAY=DBLE(BEST_RHO3D)
+          CASE(4)
+            ARRAY=DBLE(BEST_BX3D)
+          CASE(5)
+            ARRAY=DBLE(BEST_BY3D)
+          CASE(6)
+            ARRAY=DBLE(BEST_BZ3D)
+          CASE(7)
+            ARRAY=DBLE(BEST_VZ3D)
+          CASE(8)
+            ARRAY=DBLE(BEST_PG3D)
+        END SELECT
+        !
+        IF (NX.GT.4) THEN
+          ARRAY(:,:,2:NX-1)=(ARRAY(:,:,3:NX)+ARRAY(:,:,1:NX-2)+ARRAY(:,:,2:NX-1)*2.0D0)/4.0E0
+        ENDIF
+        IF (NY.GT.4) THEN
+          ARRAY(:,2:NY-1,:)=(ARRAY(:,3:NY,:)+ARRAY(:,1:NY-2,:)+ARRAY(:,2:NY-1,:)*2.0D0)/4.0E0
+        ENDIF
+        IF (NZ.GT.4) THEN
+          ARRAY(2:NZ-1,:,:)=(ARRAY(3:NZ,:,:)+ARRAY(1:NZ-2,:,:)+ARRAY(2:NZ-1,:,:)*2.0D0)/4.0E0
+        ENDIF
+
+!!!        ARRAY(:,:,2:NX-1)=(ARRAY(:,:,3:NX)+ARRAY(:,:,1:NX-2))/2.0E0
+!!!        ARRAY(:,2:NY-1,:)=(ARRAY(:,3:NY,:)+ARRAY(:,1:NY-2,:))/2.0E0
+!!!        ARRAY(2:NZ-1,:,:)=(ARRAY(3:NZ,:,:)+ARRAY(1:NZ-2,:,:))/2.0E0
+        !
+        SELECT CASE (J)
+          CASE(1)
+            TEM3D=REAL(ARRAY)
+            BEST_TEM3D=REAL(ARRAY)
+          CASE(2)
+            PG3D=REAL(ARRAY)
+            BEST_PG3D=REAL(ARRAY)
+          CASE(3)
+            RHO3D=REAL(ARRAY)
+            BEST_RHO3D=REAL(ARRAY)
+          CASE(4)
+            BX3D=REAL(ARRAY)
+            BEST_BX3D=REAL(ARRAY)
+          CASE(5)
+            BY3D=REAL(ARRAY)
+            BEST_BY3D=REAL(ARRAY)
+          CASE(6)
+            BZ3D=REAL(ARRAY)
+            BEST_BZ3D=REAL(ARRAY)
+          CASE(7)
+            VZ3D=REAL(ARRAY)
+            BEST_VZ3D=REAL(ARRAY)
+          CASE(8)
+            PG3D=REAL(ARRAY)
+            BEST_PG3D=REAL(ARRAY)
+        END SELECT
+        !
+      ENDDO
+      !
+    ENDIF
+    !
+    DEALLOCATE(GPLANS2D)
+    DEALLOCATE(FFTS2D)
+    DEALLOCATE(FFTSY2D)
+    !
+  END SUBROUTINE SMOOTHING_B
   !
   !================================================
   !

@@ -10,7 +10,7 @@ MODULE RTESOLVER
   USE ATM_PARAM, ONLY: TEM, PG, RHO
   USE ABSORPTION_MATRIX
   USE PHYS_PARAM, ONLY: SYN1D, DSYN1D, EVOLG
-  USE CODE_MODES, ONLY: MRESPFUNCT
+  USE CODE_MODES, ONLY: MRESPFUNCT, HYDROSTATIC, HYDROSTATICDER
   USE GRID_PARAM, ONLY: ZZ, NZ
   !
   IMPLICIT NONE
@@ -21,9 +21,12 @@ MODULE RTESOLVER
   REAL(DP), DIMENSION(4,4)                  :: DEVOLDVLOS, DEVOLDT_PG, DEVOLDT_RHO
   REAL(DP), DIMENSION(4,4)                  :: DEVOLDBX, DEVOLDBY, DEVOLDBZ
   REAL(DP), DIMENSION(4,4)                  :: DEVOLDPG_TEMP, DEVOLDRHO_TEMP
+  REAL(DP), DIMENSION(:), ALLOCATABLE :: DPGDTK_HE
   !
   PUBLIC :: SET_BOUNDARY
   PUBLIC :: ANALYTICAL_SOLVER
+  PUBLIC :: OLD_ANALYTICAL_SOLVER
+  PUBLIC :: DPGDTK_HE
   !
   PRIVATE :: EVOL_OPERATOR
   PRIVATE :: SOURCE_FUNCTION
@@ -49,6 +52,8 @@ MODULE RTESOLVER
   !
   SUBROUTINE ANALYTICAL_SOLVER(K,L)
     !
+    USE INVERT_PARAM, ONLY: INV_STK, INV_ATMPAR
+    !
     IMPLICIT NONE
     !
     INTEGER,    INTENT(IN)       :: K,L
@@ -59,6 +64,8 @@ MODULE RTESOLVER
     REAL(DP), DIMENSION(4,1)     :: RTE_DT_PG, RTE_DT_RHO, RTE_DPG_T, RTE_DRHO_T
     REAL(DP), DIMENSION(4,1)     :: RTE_DBX, RTE_DBY, RTE_DBZ
     REAL(DP), DIMENSION(4,1)     :: DSFM
+    !
+    INTEGER :: PCNT
     !
     CALL EVOL_OPERATOR(K,L)
     !
@@ -87,43 +94,61 @@ MODULE RTESOLVER
       ! dT at constant PG
       RTE_DT_PG=MATMUL(-DEVOLDT_PG,SFM)+MATMUL(IMAT-EVOL,DSFM)&
           +MATMUL(DEVOLDT_PG,IN)
-      DSYN1D(:,1,L,K)=RTE_DT_PG(:,1)
-      ! dT at constant RHO
+      PCNT=0
+      IF (INV_ATMPAR(1).EQV..TRUE.) THEN
+        PCNT=PCNT+1
+        DSYN1D(:,PCNT,L,K)=RTE_DT_PG(:,1)
+      ENDIF
+      ! dT at constant RHO (auxiliar)
       RTE_DT_RHO=MATMUL(-DEVOLDT_RHO,SFM)+MATMUL(IMAT-EVOL,DSFM)&
           +MATMUL(DEVOLDT_RHO,IN)
-  !DO I NEED TO STORE IT?    DSYN(K,:,10)=REAL(RTE_DT_RHO(:,1))
       !
       ! dP at constant T
       RTE_DPG_T=MATMUL(-DEVOLDPG_TEMP,SFM)+MATMUL(DEVOLDPG_TEMP,IN)
-      DSYN1D(:,2,L,K)=RTE_DPG_T(:,1)
+      IF (INV_ATMPAR(2).EQV..TRUE.) THEN
+        PCNT=PCNT+1
+        DSYN1D(:,PCNT,L,K)=RTE_DPG_T(:,1)
+      ENDIF
       !
       ! dRHO at constant T
-!      RTE_DRHO_T=REAL(-TEM(K)/RHO(K)*(RTE_DT_PG-RTE_DT_RHO))
-!      IF ((K.EQ.3*NZ/4).AND.(L.EQ.NUMW/4)) THEN
-!        PRINT*, 'antes: ', RTE_DRHO_T
-        RTE_DRHO_T=MATMUL(-DEVOLDRHO_TEMP,SFM)+MATMUL(DEVOLDRHO_TEMP,IN)
-!        PRINT*, 'despues: ', RTE_DRHO_T
-!        STOP
-!      ENDIF
-      DSYN1D(:,3,L,K)=RTE_DRHO_T(:,1)
+      RTE_DRHO_T=MATMUL(-DEVOLDRHO_TEMP,SFM)+MATMUL(DEVOLDRHO_TEMP,IN)
+      IF (INV_ATMPAR(3).EQV..TRUE.) THEN
+        PCNT=PCNT+1
+        DSYN1D(:,PCNT,L,K)=RTE_DRHO_T(:,1)
+      ENDIF
       ! dBx
       RTE_DBX=MATMUL(-DEVOLDBX,SFM)+MATMUL(DEVOLDBX,IN)
-      DSYN1D(:,4,L,K)=RTE_DBX(:,1)
+      IF (INV_ATMPAR(4).EQV..TRUE.) THEN
+        PCNT=PCNT+1
+        DSYN1D(:,PCNT,L,K)=RTE_DBX(:,1)
+      ENDIF
       !
       ! dBy
       RTE_DBY=MATMUL(-DEVOLDBY,SFM)+MATMUL(DEVOLDBY,IN)
-      DSYN1D(:,5,L,K)=RTE_DBY(:,1)
+      IF (INV_ATMPAR(5).EQV..TRUE.) THEN
+        PCNT=PCNT+1
+        DSYN1D(:,PCNT,L,K)=RTE_DBY(:,1)
+      ENDIF
       !
       ! dBz
       RTE_DBZ=MATMUL(-DEVOLDBZ,SFM)+MATMUL(DEVOLDBZ,IN)
-      DSYN1D(:,6,L,K)=RTE_DBZ(:,1)
+      IF (INV_ATMPAR(6).EQV..TRUE.) THEN
+        PCNT=PCNT+1
+        DSYN1D(:,PCNT,L,K)=RTE_DBZ(:,1)
+      ENDIF
       !
       ! dVLOS
       IM=MATMUL(-DEVOLDVLOS,SFM)+MATMUL(DEVOLDVLOS,IN)
-      DSYN1D(:,7,L,K)=IM(:,1)
+      IF (INV_ATMPAR(7).EQV..TRUE.) THEN
+        PCNT=PCNT+1
+        DSYN1D(:,PCNT,L,K)=IM(:,1)
+      ENDIF
       !
       ! dP0
-      DSYN1D(:,8,L,K)=DSYN1D(:,8,L,K)*0.E0+1.E0
+      IF (INV_ATMPAR(8).EQV..TRUE.) THEN
+        PCNT=PCNT+1
+        DSYN1D(:,PCNT,L,K)=RTE_DPG_T(:,1)
+      ENDIF
       !
       !
       EVOLG(:,:,L,K)=EVOL(:,:)
@@ -132,6 +157,113 @@ MODULE RTESOLVER
     ENDIF
     !
   END SUBROUTINE ANALYTICAL_SOLVER
+  !
+  !------------------------------------------------
+  !
+  SUBROUTINE OLD_ANALYTICAL_SOLVER(K,L)
+    !
+    IMPLICIT NONE
+    !
+    INTEGER,    INTENT(IN)       :: K,L
+    REAL(DP), DIMENSION(4)       :: SF
+    REAL(DP), DIMENSION(4,1)     :: SFM, IM, STKIN
+    REAL(DP)                     :: DSF
+    ! For derivatives
+    REAL(DP), DIMENSION(4,1)     :: RTE_DT_PG, RTE_DT_RHO, RTE_DPG_T, RTE_DRHO_T
+    REAL(DP), DIMENSION(4,1)     :: RTE_DBX, RTE_DBY, RTE_DBZ
+    REAL(DP), DIMENSION(4,1)     :: DSFM
+    !
+    REAL(DP), DIMENSION(4,4,NZ)     :: EVOLZ
+    INTEGER :: KB
+!
+    CALL EVOL_OPERATOR(K,L)
+    !
+    CALL SOURCE_FUNCTION(K,L,SF)
+    SFM(:,1)=SF(:)
+    !
+    ! If LTE
+    STKIN(:,1)=SYN1D(:,L)
+    IM=MATMUL(IMAT-EVOL,SFM)+MATMUL(EVOL,STKIN)
+    SYN1D(:,L)=IM(:,1)
+    !----------------------------------------
+    ! If Non-LTE
+    !STKIN(:,1)=STOKES(I,J,K-1,L,:)
+    !IM=REAL(MATMUL(IMAT-EVOL,SFM)+MATMUL(EVOL,STKIN))
+    !STOKES(I,J,K,L,:)=IM(:,1)
+    !----------------------------------------
+    IF (MRESPFUNCT.EQV..TRUE.) THEN
+      !
+      EVOLG(:,:,L,K)=EVOL(:,:)
+      ! Derivatives of IM:
+      !
+      ! Derivative of the Source function:
+      CALL SOURCE_FUNCTION_DER(K,L,DSF)
+      DSFM(:,:)=0.0D0
+      DSFM(1,1)=DSF
+      !
+
+      ! First, dp_t
+      ! It is so because if H. Eq., it is needed for dt_p
+      !
+      ! dP at constant T
+      RTE_DPG_T=MATMUL(-DEVOLDPG_TEMP,SFM)+MATMUL(DEVOLDPG_TEMP,STKIN)
+      DSYN1D(:,2,L,K)=RTE_DPG_T(:,1)
+
+      !
+      ! dT at constant PG
+      ! 1) Local term:
+      RTE_DT_PG=MATMUL(-DEVOLDT_PG,SFM)+MATMUL(IMAT-EVOL,DSFM)&
+          +MATMUL(DEVOLDT_PG,STKIN)
+      ! 2) Global term through HE?:
+      IF (HYDROSTATICDER.EQV..TRUE.) THEN
+        IF (HYDROSTATIC.EQV..TRUE.) THEN
+            ! We never enter here if we are in k=1 so we do not need to...
+            ! ...avoid K<=1:
+            STKIN(:,:)=0
+            EVOLZ(:,:,:)=EVOLG(:,:,L,:)
+            DO KB=1,K,1
+              IF (EVOLZ(1,1,KB).GT.1.0D-5) THEN
+                STKIN(:,1)=DSYN1D(:,2,L,KB)*DPGDTK_HE(KB)+MATMUL(EVOLZ(:,:,KB), STKIN(:,1))
+              ENDIF
+            ENDDO
+            RTE_DT_PG(:,1)=RTE_DT_PG(:,1)+STKIN(:,1)
+            STKIN(:,1)=SYN1D(:,L)
+        ENDIF
+      ENDIF ! HYDROSTATICDER
+
+      DSYN1D(:,1,L,K)=RTE_DT_PG(:,1)
+      ! dT at constant RHO
+      RTE_DT_RHO=MATMUL(-DEVOLDT_RHO,SFM)+MATMUL(IMAT-EVOL,DSFM)&
+          +MATMUL(DEVOLDT_RHO,STKIN)
+      !
+      ! dRHO at constant T
+      RTE_DRHO_T=MATMUL(-DEVOLDRHO_TEMP,SFM)+MATMUL(DEVOLDRHO_TEMP,STKIN)
+      DSYN1D(:,3,L,K)=RTE_DRHO_T(:,1)
+      ! dBx
+      RTE_DBX=MATMUL(-DEVOLDBX,SFM)+MATMUL(DEVOLDBX,STKIN)
+      DSYN1D(:,4,L,K)=RTE_DBX(:,1)
+      !
+      ! dBy
+      RTE_DBY=MATMUL(-DEVOLDBY,SFM)+MATMUL(DEVOLDBY,STKIN)
+      DSYN1D(:,5,L,K)=RTE_DBY(:,1)
+      !
+      ! dBz
+      RTE_DBZ=MATMUL(-DEVOLDBZ,SFM)+MATMUL(DEVOLDBZ,STKIN)
+      DSYN1D(:,6,L,K)=RTE_DBZ(:,1)
+      !
+      ! dVLOS
+      IM=MATMUL(-DEVOLDVLOS,SFM)+MATMUL(DEVOLDVLOS,STKIN)
+      DSYN1D(:,7,L,K)=IM(:,1)
+      !
+      ! dP0
+      DSYN1D(:,8,L,K)=DSYN1D(:,8,L,K)*0.E0+1.E0
+      !
+      !
+      ! The response function has to be calculated with respect to the
+      ! outgoing Stokes spectra, not outgoing each layer.
+    ENDIF
+    !
+  END SUBROUTINE OLD_ANALYTICAL_SOLVER
   !
   !------------------------------------------------
   !
@@ -889,6 +1021,8 @@ MODULE RTESOLVER
     DO M=1,NUML
        IF (L.GE.PIXEL_INI(M).AND.M.LE.PIXEL_END(M)) WAVELENGTH&
            =LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
+       !IF (L.GE.PIXEL_INI(M).AND.L.LE.PIXEL_END(M)) WAVELENGTH&
+       !    =LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
     ENDDO
     ! cm !
     WAVELENGTH=WAVELENGTH*1D-8
@@ -919,6 +1053,8 @@ MODULE RTESOLVER
     DO M=1,NUML
        IF (L.GE.PIXEL_INI(M).AND.M.LE.PIXEL_END(M)) WAVELENGTH&
            =LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
+       !IF (L.GE.PIXEL_INI(M).AND.M.LE.PIXEL_END(M)) WAVELENGTH&
+       !    =LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
     ENDDO
     ! cm !
     WAVELENGTH=WAVELENGTH*1D-8

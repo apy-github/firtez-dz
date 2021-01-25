@@ -33,6 +33,7 @@ MODULE MISC
   PUBLIC :: WRITE_RFS2
   PUBLIC :: READ_PSF_2D
   PUBLIC :: WRITE_BIN
+  PUBLIC :: READ_LSF_FILE
   PRIVATE
   !
   !************************************************
@@ -2394,6 +2395,143 @@ MODULE MISC
 !PRINT*, 'I AM DONE WITH WRITE_BIN'
     !
   END SUBROUTINE WRITE_BIN
+  !
+  !------------------------------------------------
+  !
+  SUBROUTINE READ_LSF_FILE(FNAME, NN, ARRAY, II)
+    !
+    CHARACTER(*), INTENT(IN)                                   :: FNAME
+    INTEGER, INTENT(IN) :: NN, II
+    REAL(DP), INTENT(INOUT), DIMENSION(NN) :: ARRAY
+    !
+    INTEGER                                  :: VV
+    !
+    REAL(SP), DIMENSION(:), ALLOCATABLE      :: TOREAD
+    !
+    INTEGER                                  :: NTOT
+    INTEGER                                  :: POSV
+    INTEGER                                  :: NEGV
+    INTEGER                                  :: MEDV
+    INTEGER                                  :: RFID
+    !
+    INTEGER(kind=8)                          :: LNTOT, LOFFSET, TO_BE_READ
+    !
+    INTEGER                                  :: NSDIMS
+    INTEGER                                  :: NIW, RNREC
+    !
+    REAL(SP), DIMENSION(:,:,:), ALLOCATABLE      :: TMP
+    REAL(SP), DIMENSION(:), ALLOCATABLE          :: TMP1D
+    !
+    INTEGER                                  :: I
+    INTEGER :: IERR
+    !
+    !PRINT*, ''
+    !PRINT*, ' + READ_LSF_FILE. Reading: '//TRIM(FNAME)//' +'
+    !
+    NTOT=5
+    !
+    CALL ALLOCATE_1D_SP(TOREAD,NTOT,'READ_ALLOCATION 1')
+    !
+    CALL READ_SP1D(FNAME, SHAPE(TOREAD), TOREAD)
+    !
+    POSV=INT(TOREAD(1))
+    NEGV=INT(TOREAD(2))
+    !
+    MEDV=(POSV+NEGV)/2
+    !
+    POSV=POSV-MEDV
+    NEGV=NEGV-MEDV
+    !
+    VV=(POSV - NEGV) / 2
+    !
+    IF ( (POSV+NEGV).GT.0.01) THEN
+      WRITE(*,*) 'READING FILE: '//TRIM(FNAME)
+      WRITE(*,*) 'NON RECOGNIZED FORMAT. STOPPING'
+      STOP
+    ELSE
+      WRITE(*,*) 'READING FILE: '//TRIM(FNAME)
+      WRITE(*,*) 'VERSION ', (POSV - NEGV) / 2
+    ENDIF
+    !
+    ! ID
+    RFID=NINT(TOREAD(3))
+    IF ( ABS(RFID-3330904).LT.0.01) THEN
+      !PRINT*, 'READING PSF FILE: '//TRIM(FNAME)
+    ELSE
+      PRINT*, 'WRONG FORMAT FOR A LINE SPREAD FUNCTION FILE.'
+      PRINT*, 'IS '//TRIM(FNAME)//' A FILE CONTAINING A LINE SPREAD FUNCTION?'
+      STOP
+    ENDIF
+    !
+    ! NUMBER OF RECORDS:
+    RNREC=INT(TOREAD(4))
+    ! NDIMS:
+    NSDIMS=INT(TOREAD(5))
+    IF (NSDIMS.NE.1) THEN
+      PRINT*, 'WRONG FORMAT FOR A LINE SPREAD FUNCTION FILE.'
+      PRINT*, 'IS '//TRIM(FNAME)//' A FILE CONTAINING A LINE SPREAD FUNCTION?'
+      STOP
+    ENDIF
+    !
+    DEALLOCATE(TOREAD)
+    !
+    ! First, read the whole header:
+    NTOT=5+NSDIMS
+    CALL ALLOCATE_1D_SP(TOREAD,NTOT,'READ_ALLOCATION 2')
+    !
+    CALL READ_SP1D(FNAME, SHAPE(TOREAD), TOREAD)
+    !
+    NIW=INT(TOREAD(6))
+    !
+    DEALLOCATE(TOREAD)
+    !
+    ! Check wavelength size supplied as compared to the one from input file:
+    IF (NIW.NE.NN) THEN
+      PRINT*, ''
+      PRINT*, ' Error! Wavelength size for spectral region #=', II
+      PRINT*, ' Number of wavelengths for this spectral region from input file: ', NN
+      PRINT*, ' Number of wavelengths found in '//TRIM(FNAME)//': ', NN
+      PRINT*, ''
+      PRINT*, ''
+      STOP
+    ENDIF
+
+    !
+    TO_BE_READ=NIW
+    LOFFSET=1
+    !
+    OPEN(UNIT=1,FILE=TRIM(FNAME),FORM="unformatted",IOSTAT=IERR)
+    IF (IERR.NE.0) THEN
+      PRINT*, '   ***   '
+      PRINT*, ' Error reading: '//TRIM(FNAME)
+      PRINT*, ' Error code: ', IERR
+      PRINT*, '   ___   '
+    ENDIF 
+      DO I=1,RNREC
+        IF (I.EQ.1) THEN
+          LNTOT=5
+          LNTOT=LNTOT+NSDIMS
+        ELSE
+          LNTOT=1
+          IF (TO_BE_READ.GT.536870902) THEN
+            LNTOT=536870902
+          ELSE
+            LNTOT=TO_BE_READ
+          ENDIF
+        ENDIF
+        ALLOCATE(TOREAD(LNTOT))
+        READ(1) TOREAD
+        ! STORE:
+        IF (I.GT.1) THEN
+          ARRAY(LOFFSET:LOFFSET+LNTOT-1)=DBLE(TOREAD)
+          LOFFSET=LOFFSET+LNTOT
+          TO_BE_READ=TO_BE_READ-LNTOT
+        ENDIF
+        DEALLOCATE(TOREAD)
+      ENDDO
+    CLOSE(UNIT=1)
+    !
+  END SUBROUTINE READ_LSF_FILE
   !
   !================================================
   !
