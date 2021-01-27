@@ -1006,10 +1006,10 @@ MODULE RTESOLVER
   !
   !------------------------------------------------
   !
-  SUBROUTINE SOURCE_FUNCTION(K,L,SF)
+   SUBROUTINE SOURCE_FUNCTION(K,L,SF)
     !
     USE FORWARD_PARAM, ONLY: NUML, PIXEL_END, PIXEL_INI &
-        , WAVE, LINE_L0, IND_LINE
+        , WAVE, LINE_L0, IND_LINE, POPL, POPU, LINE_NUM
     !
     IMPLICIT NONE
     !
@@ -1018,21 +1018,19 @@ MODULE RTESOLVER
     INTEGER                                 :: M
     REAL(DP)                                :: WAVELENGTH=0.D0
     !
-    DO M=1,NUML
-       !IF (L.GE.PIXEL_INI(M).AND.M.LE.PIXEL_END(M)) WAVELENGTH&
-       !    =LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
+    LINESELECT: DO M=1,NUML
        IF (L.GE.PIXEL_INI(M).AND.L.LE.PIXEL_END(M)) THEN
-         WAVELENGTH = LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
-         EXIT
+          WAVELENGTH=LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
+          EXIT LINESELECT
        ENDIF
-    ENDDO
+    ENDDO LINESELECT
     ! cm !
     WAVELENGTH=WAVELENGTH*1D-8
-    ! We assume black body radiation (LTE) and no polarization for the 
-    ! source function
+    ! We assume black body radiation (LTE) + fixed NLTE departure coefficients  + 
+    ! + no polarization for the source function
     SF(:)=0.0D0
     SF(1)=2.0D0*HPLA*LIGHT**2.0D0/(WAVELENGTH**5.0D0)&
-        *(1.0D0/(EXP(HPLA*LIGHT/(WAVELENGTH*KBOL*TEM(K)))-1.0D0))
+        *(1.0D0/((POPL(M,K)/POPU(M,K))*EXP(HPLA*LIGHT/(WAVELENGTH*KBOL*TEM(K)))-1.0D0))
     !
   END SUBROUTINE SOURCE_FUNCTION
   !
@@ -1042,7 +1040,7 @@ MODULE RTESOLVER
     ! Calculates the derivative of the source function with respect to the temperature
     !
     USE FORWARD_PARAM, ONLY: NUML, PIXEL_END, PIXEL_INI &
-        , WAVE, LINE_L0, IND_LINE
+        , WAVE, LINE_L0, IND_LINE, POPL, POPU, LINE_NUM
     !
     IMPLICIT NONE
     !
@@ -1052,22 +1050,84 @@ MODULE RTESOLVER
     REAL(DP)                                :: WAVELENGTH=0.D0
     REAL(DP), PARAMETER                     :: FACTOR = 8.5685641D-6 ! h^2*c^3/K
     !
-    DO M=1,NUML
-       !IF (L.GE.PIXEL_INI(M).AND.M.LE.PIXEL_END(M)) WAVELENGTH&
-       !    =LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
+    LINESELECT: DO M=1,NUML
        IF (L.GE.PIXEL_INI(M).AND.L.LE.PIXEL_END(M)) THEN
-         WAVELENGTH = LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
-         EXIT
+          WAVELENGTH=LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
+          EXIT LINESELECT
        ENDIF
-    ENDDO
+    ENDDO LINESELECT
     ! cm !
     WAVELENGTH=WAVELENGTH*1D-8
     !
     DSF = REAL((2.0D0*FACTOR/(WAVELENGTH**6.0D0*TEM(K)**2.0D0))&
-        *(EXP(HPLA*LIGHT/(WAVELENGTH*KBOL*TEM(K)))&
-        /(EXP(HPLA*LIGHT/(WAVELENGTH*KBOL*TEM(K)))-1.0D0)**2.0D0))
+        *((POPL(M,K)/POPU(M,K))*EXP(HPLA*LIGHT/(WAVELENGTH*KBOL*TEM(K)))&
+        /((POPL(M,K)/POPU(M,K))*EXP(HPLA*LIGHT/(WAVELENGTH*KBOL*TEM(K)))-1.0D0)**2.0D0))
     !
   END SUBROUTINE SOURCE_FUNCTION_DER
+  !
+! Obsolete after including nlte departure coefficients:
+! Obsolete after including nlte departure coefficients:  SUBROUTINE SOURCE_FUNCTION(K,L,SF)
+! Obsolete after including nlte departure coefficients:    !
+! Obsolete after including nlte departure coefficients:    USE FORWARD_PARAM, ONLY: NUML, PIXEL_END, PIXEL_INI &
+! Obsolete after including nlte departure coefficients:        , WAVE, LINE_L0, IND_LINE
+! Obsolete after including nlte departure coefficients:    !
+! Obsolete after including nlte departure coefficients:    IMPLICIT NONE
+! Obsolete after including nlte departure coefficients:    !
+! Obsolete after including nlte departure coefficients:    INTEGER,    INTENT(IN)                  :: K,L
+! Obsolete after including nlte departure coefficients:    REAL(DP), INTENT(OUT), DIMENSION(4)     :: SF
+! Obsolete after including nlte departure coefficients:    INTEGER                                 :: M
+! Obsolete after including nlte departure coefficients:    REAL(DP)                                :: WAVELENGTH=0.D0
+! Obsolete after including nlte departure coefficients:    !
+! Obsolete after including nlte departure coefficients:    DO M=1,NUML
+! Obsolete after including nlte departure coefficients:       !IF (L.GE.PIXEL_INI(M).AND.M.LE.PIXEL_END(M)) WAVELENGTH&
+! Obsolete after including nlte departure coefficients:       !    =LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
+! Obsolete after including nlte departure coefficients:       IF (L.GE.PIXEL_INI(M).AND.L.LE.PIXEL_END(M)) THEN
+! Obsolete after including nlte departure coefficients:         WAVELENGTH = LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
+! Obsolete after including nlte departure coefficients:         EXIT
+! Obsolete after including nlte departure coefficients:       ENDIF
+! Obsolete after including nlte departure coefficients:    ENDDO
+! Obsolete after including nlte departure coefficients:    ! cm !
+! Obsolete after including nlte departure coefficients:    WAVELENGTH=WAVELENGTH*1D-8
+! Obsolete after including nlte departure coefficients:    ! We assume black body radiation (LTE) and no polarization for the 
+! Obsolete after including nlte departure coefficients:    ! source function
+! Obsolete after including nlte departure coefficients:    SF(:)=0.0D0
+! Obsolete after including nlte departure coefficients:    SF(1)=2.0D0*HPLA*LIGHT**2.0D0/(WAVELENGTH**5.0D0)&
+! Obsolete after including nlte departure coefficients:        *(1.0D0/(EXP(HPLA*LIGHT/(WAVELENGTH*KBOL*TEM(K)))-1.0D0))
+! Obsolete after including nlte departure coefficients:    !
+! Obsolete after including nlte departure coefficients:  END SUBROUTINE SOURCE_FUNCTION
+! Obsolete after including nlte departure coefficients:  !
+! Obsolete after including nlte departure coefficients:  !------------------------------------------------
+! Obsolete after including nlte departure coefficients:  !
+! Obsolete after including nlte departure coefficients:  SUBROUTINE SOURCE_FUNCTION_DER(K,L,DSF)
+! Obsolete after including nlte departure coefficients:    ! Calculates the derivative of the source function with respect to the temperature
+! Obsolete after including nlte departure coefficients:    !
+! Obsolete after including nlte departure coefficients:    USE FORWARD_PARAM, ONLY: NUML, PIXEL_END, PIXEL_INI &
+! Obsolete after including nlte departure coefficients:        , WAVE, LINE_L0, IND_LINE
+! Obsolete after including nlte departure coefficients:    !
+! Obsolete after including nlte departure coefficients:    IMPLICIT NONE
+! Obsolete after including nlte departure coefficients:    !
+! Obsolete after including nlte departure coefficients:    INTEGER,    INTENT(IN)                  :: K,L
+! Obsolete after including nlte departure coefficients:    REAL(DP), INTENT(OUT)                   :: DSF
+! Obsolete after including nlte departure coefficients:    INTEGER                                 :: M
+! Obsolete after including nlte departure coefficients:    REAL(DP)                                :: WAVELENGTH=0.D0
+! Obsolete after including nlte departure coefficients:    REAL(DP), PARAMETER                     :: FACTOR = 8.5685641D-6 ! h^2*c^3/K
+! Obsolete after including nlte departure coefficients:    !
+! Obsolete after including nlte departure coefficients:    DO M=1,NUML
+! Obsolete after including nlte departure coefficients:       !IF (L.GE.PIXEL_INI(M).AND.M.LE.PIXEL_END(M)) WAVELENGTH&
+! Obsolete after including nlte departure coefficients:       !    =LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
+! Obsolete after including nlte departure coefficients:       IF (L.GE.PIXEL_INI(M).AND.L.LE.PIXEL_END(M)) THEN
+! Obsolete after including nlte departure coefficients:         WAVELENGTH = LINE_L0(IND_LINE(M))+WAVE(L)/1.0D3
+! Obsolete after including nlte departure coefficients:         EXIT
+! Obsolete after including nlte departure coefficients:       ENDIF
+! Obsolete after including nlte departure coefficients:    ENDDO
+! Obsolete after including nlte departure coefficients:    ! cm !
+! Obsolete after including nlte departure coefficients:    WAVELENGTH=WAVELENGTH*1D-8
+! Obsolete after including nlte departure coefficients:    !
+! Obsolete after including nlte departure coefficients:    DSF = REAL((2.0D0*FACTOR/(WAVELENGTH**6.0D0*TEM(K)**2.0D0))&
+! Obsolete after including nlte departure coefficients:        *(EXP(HPLA*LIGHT/(WAVELENGTH*KBOL*TEM(K)))&
+! Obsolete after including nlte departure coefficients:        /(EXP(HPLA*LIGHT/(WAVELENGTH*KBOL*TEM(K)))-1.0D0)**2.0D0))
+! Obsolete after including nlte departure coefficients:    !
+! Obsolete after including nlte departure coefficients:  END SUBROUTINE SOURCE_FUNCTION_DER
   !
   !------------------------------------------------
   !

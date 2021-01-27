@@ -43,6 +43,11 @@ MODULE FORWARD_PARAM
   !
   LOGICAL, PUBLIC                               :: FULL_STOKES
   !
+! For Departure coefficients: JMB 21/01/2021
+  REAL(DP), PUBLIC, ALLOCATABLE                 :: POPL(:,:), POPU(:,:)
+  CHARACTER*800, PUBLIC, ALLOCATABLE            :: POP_FILE(:)
+  INTEGER, PUBLIC, ALLOCATABLE                  :: IND_FOUND(:)
+  !
   PRIVATE
   !
   !************************************************

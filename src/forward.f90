@@ -932,7 +932,9 @@ IF (KC5(K).LT.KC5THRESHOLD) THEN
                 !
                 IF (BLENDSID(L,B).GT.0.1) THEN
                   !
-                  CALL OPAC_LINE(BLENDSID(L,B),TEM(K),NELEC,NHYD,KLIN(L,B))
+                  ! Obsolete dep. coef.:CALL OPAC_LINE(BLENDSID(L,B),TEM(K),NELEC,NHYD,KLIN(L,B))
+                  ! OPAC_LINE now wants to departure-coefficients too
+                  CALL OPAC_LINE(POPL(L,K),POPU(L,K),BLENDSID(L,B),TEM(K),NELEC,NHYD,KLIN(L,B))
                   !
                   CALL GET_DAMPING(LINE_ZN(BLENDSID(L,B)), LINE_L0(BLENDSID(L,B))&
                        *1D-8, LINE_ION(BLENDSID(L,B)), EPLOW(BLENDSID(L,B)), NHYD&
@@ -1121,7 +1123,9 @@ ENDIF
                 !
                 IF (BLENDSID(L,B).GT.0.1) THEN
                   !
-                  CALL OPAC_LINE(BLENDSID(L,B),TEM(K),NELEC,NHYD,KLIN(L,B))
+                  ! Obsolete nlte. dep. coef.:CALL OPAC_LINE(BLENDSID(L,B),TEM(K),NELEC,NHYD,KLIN(L,B))
+                  ! OPAC_LINE now wants to departure-coefficients too !
+                  CALL OPAC_LINE(POPL(L,K),POPU(L,K),BLENDSID(L,B),TEM(K),NELEC,NHYD,KLIN(L,B))
                   !
                   CALL GET_DAMPING(LINE_ZN(BLENDSID(L,B)), LINE_L0(BLENDSID(L,B))&
                        *1D-8, LINE_ION(BLENDSID(L,B)), EPLOW(BLENDSID(L,B)), NHYD&

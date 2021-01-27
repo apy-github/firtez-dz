@@ -383,8 +383,11 @@ MODULE INPUT_FILE
     USE CODE_MODES
     USE GRID_PARAM, ONLY: NZ
     USE INVERT_PARAM
+! Obsolete nlte dep. coef.:    USE FORWARD_PARAM, ONLY: LINE_L0, IND_LINE, LINE_POS, IND_LINE, NUML &
+! Obsolete nlte dep. coef.:        , NUML_DATABASE, FULL_STOKES, HYDRO_TOP
     USE FORWARD_PARAM, ONLY: LINE_L0, IND_LINE, LINE_POS, IND_LINE, NUML &
-        , NUML_DATABASE, FULL_STOKES, HYDRO_TOP
+           , NUML_DATABASE, FULL_STOKES, HYDRO_TOP, POPL, POPU 
+    USE ALLOCATE_UTILS, ONLY: ALLOCATE_2D_DP
     !USE LOG, ONLY: LOGW_CHAR_REAL
     !
     CHARACTER*800                              :: LINE
@@ -501,6 +504,14 @@ MODULE INPUT_FILE
        CASE('LINES:')
           LINES = .TRUE.
           CALL NREAD_LINES(CNT)
+          ! NZ was already stablished & NUML is determined ny NREAD_LINES
+          ! So, now we can allocate the arrays for departure coefficients
+          ! We need them even if we will not do NLTE
+          CALL ALLOCATE_2D_DP(POPL,NUML,NZ,'POPL')
+          CALL ALLOCATE_2D_DP(POPU,NUML,NZ,'POPU')
+          ! Ensure LTE to begin with
+          POPL(:,:)=1D0
+          POPU(:,:)=1D0
        CASE('MODE:')
           WORKINGMODE = .TRUE.
           CNT = CNT + 1
@@ -562,6 +573,8 @@ MODULE INPUT_FILE
           CALL NSET_LSF(CNT)
        CASE('MISC SETUP:')
           CALL NSET_MISC(CNT)
+       CASE('NLTE DEPARTURE COEFFICIENTS:')
+         CALL NSET_NLTE(CNT)
        CASE('END:')
           EXIT
        ENDSELECT
@@ -2781,6 +2794,289 @@ ENDIF
     REG_TYPE_FREEV(:)=1
     !
   END SUBROUTINE FREE_VAR_SPACE
+   SUBROUTINE NSET_NLTE(START_LINE)
+    USE FORWARD_PARAM, ONLY: NUML, BLENDSID, BLENDSMAX, POP_FILE, IND_LINE &
+         , LINE_NUM, POPL, POPU, IND_FOUND
+    USE CODE_MODES, ONLY: INPUTFILE, MVERBOSE, DATAPATH
+    USE user_mpi, ONLY: mpi__myrank, MPI_COMM_WORLD
+    USE LINES_DATABASE, ONLY: NCOLUMNS
+    USE GRID_PARAM, ONLY: NZ
+    !
+    INTEGER, INTENT(INOUT)                    :: START_LINE
+    INTEGER                                   :: I, J, K, M, NUM_LINES_OBS, NCOL, LINDEX, TAR
+    LOGICAL                                   :: CONDIT, EXISTS
+    CHARACTER*800                             :: LINE
+    CHARACTER*100                             :: FILE
+    INTEGER, ALLOCATABLE                      :: IND_FOUND_DUMMY(:)
+    CHARACTER*800, ALLOCATABLE                :: POP_FILE_DUMMY(:)
+    ALLOCATE(POP_FILE(NUML),IND_FOUND(NUML))
+    ALLOCATE(POP_FILE_DUMMY(NUML),IND_FOUND_DUMMY(NUML))
+    IND_FOUND(:)=-1
+    DO J=1,NUML
+       POP_FILE(J)='LTE'
+    ENDDO
+    !
+    NUM_LINES_OBS=1
+    I=0
+    CONDIT=.TRUE.
+    !
+    DO WHILE (START_LINE < INPUT_READ_NUMBER)
+       START_LINE=START_LINE+1
+       LINE=INPUT_READ_LINES(START_LINE)
+       ! Check if the section has finished:
+       DO J=1,800
+          IF (LINE(J:J) == ':') THEN
+             CONDIT=.FALSE.
+             START_LINE=START_LINE-1
+             EXIT
+          ENDIF
+       ENDDO
+       IF (.NOT.CONDIT) EXIT
+       NCOL=NCOLUMNS(LINE)
+       !PRINT*,NCOL,':',LINE
+       SELECT CASE(NCOL)
+          CASE(2)
+             CALL SPLIT_NLTE_LINE_2C(LINE,LINDEX,FILE)
+             POP_FILE(NUM_LINES_OBS)=FILE
+             IND_FOUND(NUM_LINES_OBS)=LINDEX
+             !PRINT*,FILE,LINDEX,NUM_LINES_OBS
+         CASE DEFAULT 
+             PRINT*, ''
+             PRINT*, ' ** Wrong input format in: "NLTE DEPARTURE COEFFICIENTS"'
+             PRINT*, ' -- Line: "'//TRIM(ADJUSTL(LINE))//'"!...'
+             PRINT*, ' ...does not have 2 fields.'
+             PRINT*, ''
+             PRINT*, ' Stopping'
+             PRINT*, ''
+             STOP
+       END SELECT
+       ! Checking if file exists
+       IF (TRIM(FILE) /= 'LTE') THEN
+          INQUIRE(FILE=TRIM(DATAPATH)//"/./"//TRIM(FILE), EXIST=EXISTS)
+          IF (.NOT.EXISTS) THEN
+             PRINT*, ""
+             PRINT*, "Error!"
+             PRINT*, "I cannot find NLTE file: "//TRIM(FILE)//" in directory: "//TRIM(DATAPATH)
+             PRINT*, ""
+             STOP
+             !CALL MPI_ABORT(MPI_COMM_WORLD)
+          ENDIF ! Writing error
+       ENDIF
+       NUM_LINES_OBS=NUM_LINES_OBS+1
+    ENDDO
+    ! Now we need to check that NLTE lines are not blended
+    DO I=1,NUML
+       IF (IND_FOUND(I) /= -1) THEN
+          DO J=1,NUML
+             DO K=1,BLENDSMAX+1
+                IF (BLENDSID(J,K) /= -1) THEN
+                   IF (LINE_NUM(BLENDSID(J,K)) == IND_FOUND(I)) THEN
+                      !PRINT*,IND_FOUND(I),LINE_NUM(BLENDSID(J,K))
+                      !PRINT*,BLENDSID(J,:)
+                      DO M=1,BLENDSMAX+1
+                         IF (LINE_NUM(BLENDSID(J,M)) /= IND_FOUND(I)) THEN
+                            IF (BLENDSID(J,M) /= -1) THEN
+                               IF (MPI__MYRANK ==0) THEN
+                                  PRINT*,'NLTE lines cannot be blended. Line index:',IND_FOUND(I)
+                                  PRINT*,'They must appear as isolated entried inside LINES:'
+                                  PRINT*,'Modify '//TRIM(INPUTFILE)
+                               ENDIF
+                               !PRINT*,BLENDSID(J,:)
+                               !CALL MPI_ABORT(MPI_COMM_WORLD)
+                               STOP
+                            ENDIF
+                         ENDIF
+                      ENDDO
+                   ENDIF
+                ENDIF
+             ENDDO
+          ENDDO
+       ENDIF
+    ENDDO
+    ! Now we check that all lines under NLTE DEPARTURE COEFFICIENTS:
+    ! are also included in LINES:
+    DO I=1,NUML
+       IF (IND_FOUND(I) /= -1) THEN
+          TAR=0
+          DO J=1,NUML
+             IF (IND_FOUND(I) == LINE_NUM(BLENDSID(J,1))) THEN
+                TAR=TAR+1
+                EXIT
+             ENDIF
+          ENDDO
+          IF (TAR == 0) THEN
+             IF (MPI__MYRANK == 0) THEN
+                WRITE(*,FMT='(A,1X,I3,1X,A)') 'Why do you provide departure coefficients for line #' &
+                     ,IND_FOUND(I),' but this line is not under LINES?'
+                STOP
+             ENDIF
+          ENDIF
+       ENDIF
+    ENDDO
+    ! Now we reorder POP_FILE and IND_FOUND so that it has the same
+    ! order as in LINES:
+    IND_FOUND_DUMMY(:)=-1
+    POP_FILE_DUMMY='LTE'
+    DO J=1,NUML
+       IF (BLENDSID(J,1) /= -1) THEN
+          DO K=1,NUML
+             IF (IND_FOUND(K) /= -1) THEN
+                IF (IND_FOUND(K) == LINE_NUM(BLENDSID(J,1))) THEN
+                   IND_FOUND_DUMMY(J)=IND_FOUND(K)
+                   POP_FILE_DUMMY(J)=POP_FILE(K)
+                   EXIT
+                ENDIF
+             ENDIF
+          ENDDO
+       ENDIF
+    ENDDO
+    ! After this IND_FOUND_DUMMY and POP_FILE_DUMMY will
+    ! have the exact same order as BLENDSID
+    POP_FILE=POP_FILE_DUMMY
+    IND_FOUND=IND_FOUND_DUMMY
+    DEALLOCATE(POP_FILE_DUMMY,IND_FOUND_DUMMY)
+    ! Now we read departure coefficients
+    DO I=1,NUML
+       IF (IND_FOUND(I) /= -1) THEN
+          IF (MPI__MYRANK == 0) THEN
+             WRITE(*,FMT='(A,1X,I3,1X,A)') 'Spectral line #',IND_FOUND(I) &
+                  ,'will be treated under NLTE using departure coefficients from ' &
+                  ,TRIM(POP_FILE(I))
+          ENDIF
+       ELSE
+          DO J=1,BLENDSMAX+1
+             IF (MPI__MYRANK == 0) THEN
+                IF (BLENDSID(I,J) /= -1) WRITE(*,FMT='(A,1X,I3,1X,A)') 'Spectral line ' &
+                     ,LINE_NUM(BLENDSID(I,J)),' will be treated under LTE'
+             ENDIF
+          ENDDO
+       ENDIF
+    ENDDO
+    !
+    DO I=1,NUML
+       IF (IND_FOUND(I) /= -1) CALL READ_DEPARTURE_COEFFICIENTS(I)
+    ENDDO
+    !
+  END SUBROUTINE NSET_NLTE
+  !
+  !_____________________________________________
+  !
+  SUBROUTINE READ_DEPARTURE_COEFFICIENTS(LINDEX)
+    !
+    USE GRID_PARAM, ONLY : NZ
+    USE FORWARD_PARAM, ONLY: NUML, POP_FILE, POPL, POPU, IND_LINE, LINE_NUM, IND_FOUND
+    USE CODE_MODES, ONLY: DATAPATH
+    !
+    INTEGER, INTENT(IN)        :: LINDEX
+    REAL(DP)                   :: BETAL, BETAU
+    INTEGER                    :: I
+    !
+    OPEN(UNIT=99,FILE=TRIM(DATAPATH)//TRIM(POP_FILE(LINDEX)),STATUS='OLD',FORM='UNFORMATTED')
+    DO I=1,NZ
+       READ(UNIT=99) BETAL, BETAU
+       POPL(LINDEX,I)=BETAL
+       POPU(LINDEX,I)=BETAU
+    ENDDO
+    CLOSE(UNIT=99)
+    !IF (mpi__myrank.EQ.0) WRITE(*,FMT='(A,I3,A)') 'LINE #',IND_FOUND(LINDEX) &
+    !     ,' will be treated under NLTE:',TRIM(POP_FILE(LINDEX))
+    !
+  END SUBROUTINE READ_DEPARTURE_COEFFICIENTS
+  !________________________________________________
+
+
+  !________________________________________________
+  !
+  SUBROUTINE SPLIT_NLTE_LINE_2C(INLINE, LINDEX, FILE)
+    !
+    USE ALLOCATE_UTILS, ONLY: ALLOCATE_1D_IP
+    USE LINES_DATABASE, ONLY: NCOLUMNS
+    !
+    CHARACTER(*), INTENT(IN)       :: INLINE
+    INTEGER                        :: LINDEX
+    CHARACTER*100                  :: FILE
+    REAL(DP)                       :: LSFSIGMA, LSFW0
+    !
+    INTEGER                         :: I, J, NCOL, ENDENTRY, IISIGMA
+    !
+    LOGICAL                         :: PRECHAR, SPECIALCHAR, ISREAL
+    !
+    INTEGER, ALLOCATABLE            :: INIT(:), FINI(:)
+    !
+    NCOL=NCOLUMNS(INLINE)
+    !
+    ! WHERE DO COLUMNS BEGIN?:
+    CALL ALLOCATE_1D_IP(INIT,NCOL,'INIT ARRAY IN READ_LINES.')
+    CALL ALLOCATE_1D_IP(FINI,NCOL,'FINI ARRAY IN READ_LINES.')
+    !
+    NCOL=0
+    !
+    PRECHAR=.FALSE.
+    SPECIALCHAR=.FALSE.
+    !
+    DO I=1,LEN(INLINE)
+       IF (INLINE(I:I).NE.' ') THEN
+          ! AM I SPECIAL?
+          IF (INLINE(I:I).EQ.'#') THEN
+             SPECIALCHAR=.TRUE.
+             CYCLE
+          ENDIF
+          !WAS THE PREVIOUS THING A NON EMPTY SPACE?
+          IF ((PRECHAR.EQV..FALSE.).AND.(SPECIALCHAR.EQV..FALSE.)) THEN
+             NCOL=NCOL+1
+             INIT(NCOL)=I
+             IF (NCOL.GT.1) FINI(NCOL-1)=I-1
+          ELSE
+             SPECIALCHAR=.FALSE.
+          ENDIF
+          ! UPDATE PRECHAR:
+          PRECHAR=.TRUE.
+       ELSE
+          PRECHAR=.FALSE.
+       ENDIF
+       IF (SPECIALCHAR.EQV..TRUE.) EXIT
+    ENDDO
+    IF (SPECIALCHAR.EQV..TRUE.) THEN
+       FINI(NCOL)=I-2
+    ELSE
+       FINI(NCOL)=I-1!LEN(INLINE)
+    ENDIF
+    !
+    IF (NCOL.NE.2) THEN
+       IF (mpi__myrank.EQ.0) THEN
+          PRINT*, '   ***   '
+          PRINT*, ' Wrong format! '
+          PRINT*, INLINE
+          PRINT*, '   ***   '
+          STOP
+       ENDIF
+    ENDIF
+    !
+    ! NOW, WE ASSIGN THE VARIOUS THINGS:
+    DO I=1,NCOL
+       !PRINT*,INIT(I),FINI(I)
+       !PRINT*,INLINE(INIT(I):FINI(I))
+       SELECT CASE(I)
+       CASE(1)
+          READ(INLINE(INIT(I):FINI(I)), '(i14)') LINDEX
+          !print*,lindex,i
+       CASE(2)
+          READ(INLINE(INIT(I):FINI(I)), '(A)') FILE
+          !print*,TRIM(file),i
+       END SELECT
+       !READ(*,*)
+    ENDDO
+
+!PRINT*, 'INIT: ', INIT
+!PRINT*, 'FINI: ', FINI
+!PRINT*, INW, ISTART, ISTEP
+    !
+    DEALLOCATE(INIT)
+    DEALLOCATE(FINI)
+
+    !
+  END SUBROUTINE SPLIT_NLTE_LINE_2C
+  !________________________________________________
   !
   !================================================
   !
