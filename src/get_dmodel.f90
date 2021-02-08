@@ -5,7 +5,7 @@ MODULE GET_DMODEL
   !
   USE USER_MPI
   !
-  USE CODE_MODES, ONLY: VREGULARIZATION, INVERSIONTYPE
+  USE CODE_MODES, ONLY: VREGULARIZATION, INVERSIONTYPE, MVERBOSE
   USE CONS_PARAM, ONLY: SP, DP
   USE GRID_PARAM, ONLY: ZZ, NZ, NY, NX
   USE PHYS_PARAM
@@ -27,12 +27,17 @@ MODULE GET_DMODEL
   !
   IMPLICIT NONE
   !
+  REAL(DP) :: PEN_FACTOR
+  REAL(DP), DIMENSION(8), PARAMETER :: PARAM_NORMS=(/6000.0d0, 1.0d5, 1.0d-5, 1.0d3, 1.0d3, 1.0d3, 1.0d6,6.0d2/)
+  !                                                 tem     ,  pgas,    rho,    bx,    by,    bz,  vlos,   p0
+  !
   !::::::::::::::::::::::::::::::::::::::::::::::::
   !
   PUBLIC :: GET_DMODEL3DC
   PUBLIC :: GET_DMODEL3DS
   PUBLIC :: IFREE_VAR_SPACE
   PUBLIC :: SET_WEIGHTS
+  PUBLIC :: PERT_TEMP
   PRIVATE
   !
   !************************************************
@@ -375,6 +380,8 @@ ENDIF
       ! If I am Temperature:
       IF (CURIC.EQ.0) THEN
         GET_NJEVALS=NZ
+      ELSE IF (CURIC.EQ.MAXITER) THEN
+        GET_NJEVALS=NZ
       ELSE
         GET_NJEVALS=MIN(NZ,INT(CYCPOW**(CURIC+TOFFSET-1)))
         !
@@ -408,8 +415,8 @@ ENDIF
     !
     OFFSET=0
     !
-    MPERT=0.1D0
-    SVDTOL=16
+    MPERT=0.25D0
+    SVDTOL=4
     !
     IFREEP=OFFSET
     CNT_FREEV=1
@@ -419,6 +426,7 @@ ENDIF
       !
       ! Warning, testing the possibility of having T with more...
       ! ...freedom from the beginning than the others.
+!PRINT*, I, INV_ATMPAR(I), NSLB_MAX(I), NJEVALS, NZ, INSLABS
       CALL UPDATE_COEFS(I,INV_ATMPAR(I),NSLB_MAX(I),NJEVALS,NZ &
           ,INSLABS)
 
@@ -638,29 +646,30 @@ ENDIF
     DO ITPAR=1,SIZE(INV_ATMPAR)
       IF (INV_ATMPAR(ITPAR).EQV..TRUE.) THEN
 
-        SELECT CASE(ITPAR)
-          CASE(1)
-            NORM=6000.0D0
-          CASE(2)
-            NORM=1.0D5
-          CASE(3)
-            NORM=1.0D-5
-          CASE(4)
-            NORM=1000.0D0
-          CASE(5)
-            NORM=1000.0D0
-          CASE(6)
-            NORM=1000.0D0
-          CASE(7)
-            NORM=1.0D5
-          CASE(8)
-            NORM=600.0D0
-        ENDSELECT
+        !SELECT CASE(ITPAR)
+        !  CASE(1)
+        !    NORM=6000.0D0
+        !  CASE(2)
+        !    NORM=1.0D5
+        !  CASE(3)
+        !    NORM=1.0D-5
+        !  CASE(4)
+        !    NORM=1000.0D0
+        !  CASE(5)
+        !    NORM=1000.0D0
+        !  CASE(6)
+        !    NORM=1000.0D0
+        !  CASE(7)
+        !    NORM=1.0D5
+        !  CASE(8)
+        !    NORM=600.0D0
+        !ENDSELECT
+        NORM = PARAM_NORMS(ITPAR)
 
         ITVAR=ITVAR+1
         JDELT=NSLAB_PER_FREEV(ITVAR)-1
 
-        !!!!!PRINT*, ' I=', ITPAR, ' ; Norm=', NORM
+        !PRINT*, ' I=', ITPAR, ' ; Norm=', NORM
         ATM_FACTOR(ITPAR)=1.D0*NORM
 
         JACOB(:,JINIT:JINIT+JDELT) &
@@ -685,6 +694,7 @@ ENDIF
   !
   SUBROUTINE NEW_SOLVE_PERTURBATION()
     !
+    !USE LM, ONLY: PGET_PERTURBATION
     USE LM, ONLY: GET_PERTURBATION
     !
     INTEGER       :: I, CNT
@@ -692,10 +702,12 @@ ENDIF
     !
     FACTOR=1.0D0
     !
-    IF (VREGULARIZATION) THEN
+    IF (.NOT.VREGULARIZATION) THEN
+PRINT*, ' NEW_SOLVE_PERTURBATION ??'
       PEN_RES(:)=0.0D0
       PEN_HSS(:,:)=0.0D0
     ENDIF
+!PRINT*, PEN_FACTOR
     !
     CALL GET_PERTURBATION(IFREEP, NFREQ&
         , JACOB, INV_SLA(10:MSGSIZE) &
@@ -865,7 +877,18 @@ ENDIF
     ! 1b) Add reg term?
     IF (VREGULARIZATION) THEN
 !PRINT*, VREGULARIZATION
-      !PRINT*, ' Chi: ', INV_SLA(2), ' ; Reg. Chi: ', SUM(PEN_RES*PEN_RES), ' ; INU=', INU
+!
+      PEN_FACTOR=1.0d0
+      !IF (SUM(PEN_RES*PEN_RES).LT.(INV_SLA(2)*1.0D-2)) THEN
+      !  !PEN_FACTOR=DSQRT(INV_SLA(2)/SUM(PEN_RES*PEN_RES)*1.0D-1)
+      !PEN_FACTOR=1.0d0
+      !ENDIF
+IF (MVERBOSE.GT.0) THEN
+      PRINT*, ' Chi: ', INV_SLA(2), ' ; Reg. Chi: ', SUM(PEN_RES*PEN_RES)
+ENDIF
+!
+      !PEN_RES=PEN_RES*PEN_FACTOR
+      !PEN_HSS=PEN_HSS*PEN_FACTOR
       INV_SLA(2)=INV_SLA(2)+SUM(PEN_RES*PEN_RES)
     ENDIF
     !
@@ -918,6 +941,11 @@ ENDIF
   !
   !------------------------------------------------
   !
+
+
+  !
+  !
+  !
   SUBROUTINE GET_IT_PENALTIES()
     !
     INTEGER :: JINIT
@@ -933,9 +961,16 @@ ENDIF
     !
     REAL(DP),DIMENSION(:,:), POINTER  :: PTR_COEF
     REAL(SP),DIMENSION(:), POINTER    :: PTR_MODEL
+    REAL(SP),DIMENSION(:), POINTER    :: PTR_ZMODEL
     !
     REAL(DP),DIMENSION(:,:), ALLOCATABLE  :: IT_LACOB
+    REAL(DP),DIMENSION(:), ALLOCATABLE  :: ITZ
     !
+    REAL(DP) :: GDZ
+    REAL(DP) :: DZ
+    !
+    !
+    PENALTY(:)=1.0d0
     !
     JI=1
     ITVAR=0
@@ -943,101 +978,173 @@ ENDIF
       IF (INV_ATMPAR(ITPAR).EQV..TRUE.) THEN
         ITVAR=ITVAR+1
 
+        !PTR_ZMODEL => MODEL2D_RCV(:,13,1)
+        PTR_ZMODEL => MODEL2D_RCV(:,12,1) ! Use tau instead
         SELECT CASE(ITPAR)
           CASE(1)
              PTR_COEF => TM_COEFS(:,:)
              PTR_MODEL => MODEL2D_RCV(:,1,1)
-             NORM=6000.0D0
+             !NORM=6000.0D0
           CASE(2)
              PTR_COEF => PG_COEFS(:,:)
              PTR_MODEL => MODEL2D_RCV(:,2,1)
-             NORM=1.0D5
+             !NORM=1.0D5
           CASE(3)
              PTR_COEF => RH_COEFS(:,:)
              PTR_MODEL => MODEL2D_RCV(:,3,1)
-             NORM=1.0D-5
+             !NORM=1.0D-5
           CASE(4)
              PTR_COEF => BX_COEFS(:,:)
              PTR_MODEL => MODEL2D_RCV(:,6,1)
-             NORM=1.0D3
+             !NORM=1.0D3
           CASE(5)
              PTR_COEF => BY_COEFS(:,:)
              PTR_MODEL => MODEL2D_RCV(:,7,1)
-             NORM=1.0D3
+             !NORM=1.0D3
           CASE(6)
              PTR_COEF => BZ_COEFS(:,:)
              PTR_MODEL => MODEL2D_RCV(:,8,1)
-             NORM=1.0D3
+             !NORM=1.0D3
           CASE(7)
              PTR_COEF => VZ_COEFS(:,:)
              PTR_MODEL => MODEL2D_RCV(:,11,1)
-             NORM=1.0D5
+             !NORM=1.0D5
           CASE(8)
              PTR_COEF => P0_COEFS(:,:)
              PTR_MODEL => MODEL2D_RCV(:,2,1)
-             NORM=600.0D0
+             !NORM=600.0D0
         ENDSELECT  
+        NORM = PARAM_NORMS(ITPAR)
         ! Do I need to normalize by the number of free parameters?:ALP=DSQRT(DBLE(PEN_ALP(ITPAR))/DBLE(IFREEP))
-        ALP=DSQRT(DBLE(PEN_ALP(ITPAR))/DBLE(IFREEP))
-        !ALP=DSQRT(DBLE(PEN_ALP(ITPAR)))
+        !ALP=DSQRT(DBLE(PEN_ALP(ITPAR))/DBLE(IFREEP))
+        ALP=DSQRT(DBLE(PEN_ALP(ITPAR)))
 
         JD = NSLAB_PER_FREEV(ITVAR)
         JF=JI+JD-1
 !        PRINT*, PTR_MODEL
         CALL CONTRACT_VECTOR(JD, PTR_MODEL, PTR_COEF, SAMPLED_MOD(JI:JF))
         SAMPLED_MOD(JI:JF)=SAMPLED_MOD(JI:JF)/NORM
-!        PRINT*, SAMPLED_MOD
+
+!PRINT*, SHAPE(PTR_COEF), JD, '<<<<<<<<<<<<<<<<<<<<<'
+!!!!!!!!        ALLOCATE(ITZ(JD))
+!!!!!!!!        ITZ(:)=0.0D0
+!!!!!!!!        CALL CONTRACT_VECTOR(JD, PTR_ZMODEL, PTR_COEF, ITZ(:))
+!        ITZ=ITZ*1.0D-5
+!        PRINT*, 'ITZ/DZ=', ITZ / ((PTR_ZMODEL(NZ)-PTR_ZMODEL(1))*1.0D-5)
 
         NPEN=JD
         ALLOCATE(IT_LACOB(NPEN,JD))
+        PENALTY(JI:JF)=1.0d0! / dble(JD)
+!!!::::        IF (JD.EQ.1) THEN
+!!!::::          DZ = 1.0d0
+!!!::::          PENALTY(JI:JF)=DZ
+!!!::::        ELSE
+!!!::::          DO K=1,NPEN
+!!!::::            IF (K.EQ.1) then
+!!!::::              ! From Z origin to mid point in between the first two nodes:
+!!!::::              !DZ = (ITZ(K)+ITZ(K+1))/2.0d0 - PTR_ZMODEL(1) * 1.0D-5
+!!!::::              DZ = (ITZ(K)+ITZ(K+1))/2.0d0 - ITZ(K)
+!!!::::            else if (K.eq.JD) then
+!!!::::              ! From mid point in between the last two nodes to the end of the atmosphere:
+!!!::::              !DZ = PTR_ZMODEL(NZ) * 1.0D-5 - (ITZ(K-1)+ITZ(K))/2.0d0
+!!!::::              DZ = ITZ(K) - (ITZ(K-1)+ITZ(K))/2.0d0
+!!!::::            else
+!!!::::              ! From mid point in between current and previous nodes to the mid point in between current and next one:
+!!!::::              DZ = (ITZ(K+1) - ITZ(K-1))/2.0d0
+!!!::::            endif
+!!!::::            ! Normalize it to the atmosphere extension:
+!!!::::            !PENALTY(JI+(K-1))=DZ / ((PTR_ZMODEL(NZ)-PTR_ZMODEL(1))*1.0D-5)
+!!!::::            PENALTY(JI+(K-1)) = DZ / (ITZ(JD)-ITZ(1))
+!!!::::!            PRINT*, '        >>', DZ, ';', ((PTR_ZMODEL(NZ)-PTR_ZMODEL(1))*1.0D-5), ';', PENALTY(JI+(K-1)), ';', K
+!!!::::!!!            PRINT*, '        >>', DZ, ';', ITZ(JD)-ITZ(1), '~', (PTR_ZMODEL(NZ)-PTR_ZMODEL(1)), ';', PENALTY(JI+(K-1)), ';', K
+!!!::::          ENDDO
+!!!::::
+!!!::::        ENDIF
+!print*, 'Sampled mod: ', SAMPLED_MOD(JI:JF)
+!print*, 'pen_type: ', PEN_TYP, ';', PEN_TYP(ITpAR), ';', itpar
+
         IT_LACOB(:,:)=0.0D0
         PEN_RES(JI:JF)=0.0D0
-        !SELECT CASE(REG_TYPE_FREEV(ITVAR))
-        SELECT CASE(PEN_TYP(ITVAR))
+        SELECT CASE(PEN_TYP(ITPAR))
           CASE(0)
-            ! Difference to 0:
-            PENALTY(JI:JF)=SAMPLED_MOD(JI:JF)-0.0D0
-            !PEN_RES(JI:JF)=1.0D0 * PENALTY(JI:JF)
-            DO K=1,JD
-              IT_LACOB(K,K)=1.0D0
+            PENALTY(JI:JF)=1.0d0 / dble(JD)
+            DO K=1,NPEN
+              IT_LACOB(K,K)=1.0D0*PENALTY(K+JI-1)
+!PRINT*, '       ->', K, ';', PENALTY(K+JI-1), ';', IT_LACOB(K,K)
             ENDDO
+            ! Difference to 0:
+!            PENALTY(JI:JF)=PENALTY(JI:JF)*(SAMPLED_MOD(JI:JF)-0.0D0)
           CASE(1)
             ! Difference to next node:
             IF (JD.GT.1) THEN
-              ! First, estimate the penalty for each node:
-              DO K=JI,JF-1
-                PENALTY(K)=SAMPLED_MOD(K)-SAMPLED_MOD(K+1)
-              ENDDO
               ! Second, fill the lacobian for this physical parameter:
-              DO K=1,JD-1
-                IT_LACOB(K,K)=1.0D0
-                IT_LACOB(K+1,K)=-1.0D0
-              ENDDO
+              DO K=2,JD
+                IT_LACOB(K,K)=1.0D0*PENALTY(K+JI-1)
+                IT_LACOB(K,K-1)=-1.0D0*PENALTY(K+JI-1)
+              ENDDO              ! First, estimate the penalty for each node:
+!!!!              DO K=JI,JF-1
+!!!!                PENALTY(K)=PENALTY(K)*(SAMPLED_MOD(K)-SAMPLED_MOD(K+1)) &
+!!!!                    /((ITZ(K-JI+1)-ITZ(K-JI+1+1)) / (ITZ(JD)-ITZ(1)))
+!!!!                !!PENALTY(K)=PENALTY(K)*(SAMPLED_MOD(K)-SAMPLED_MOD(K+1)) &
+!!!!                !!    /((ITZ(K-JI+1)-ITZ(K-JI+1+1)) / ((PTR_ZMODEL(NZ)-PTR_ZMODEL(1))*1.0D-5))
+!!!!              ENDDO
 
             ENDIF
  
         ENDSELECT
+
         ! Now, estimate the residual term of the regularization term:
 !        PRINT*, ','
-!PRINT*, NPEN, JD, '<<<<', ITVAR
         IT_LACOB=IT_LACOB*ALP
+        !
+        !
+        ! Testing:
+!print*, shape(PTR_COEF)
+!print*, sum(PTR_COEF, dim=1)
+!stop
+        PENALTY(JI:JF) = MATMUL(IT_LACOB, SAMPLED_MOD(JI:JF))
+!print*, 'Penalty: ', PENALTY(JI:JF), ';', SUM(PENALTY(JI:JF))
+!stop
+        ! Testing.
+        ! 
+        ! 
+        ! 
+!PRINT*, SUM(PENALTY(JI:JF)*PENALTY(JI:JF)), SUM(ABS(PENALTY(JI:JF)))
         PENALTY(JI:JF)=PENALTY(JI:JF)*ALP
         PEN_RES(JI:JF)=MATMUL(TRANSPOSE(IT_LACOB), PENALTY(JI:JF))
+!PRINT*, ':::::', shape(IT_LACOB), ';', shape(PENALTY(JI:JF)), ';', shape(PEN_RES(JI:JF))
         PEN_HSS(JI:JF,JI:JF)=MATMUL(TRANSPOSE(IT_LACOB), IT_LACOB)
+!PRINT*, ':::::', shape(IT_LACOB), ';', shape(PEN_HSS(JI:JF,JI:JF))
+!!!!        PRINT*, ' Alpha; JI, JF'
+!!!!        PRINT*, ALP, JI, JF
+!!!!!        PRINT*, ' Model:'
+!!!!!        PRINT*, SAMPLED_MOD(JI:JF)
+!!!!        PRINT*, ' Penalty:', PENALTY
+!!!!!        PRINT*, ' Penalty:'
+!!!!!        PRINT*, SUM(PENALTY(JI:JF)*PENALTY(JI:JF))
+!!!!!        PRINT*, ' Lesidue:'
+!!!!!        PRINT*, PEN_RES
+!!!!        PRINT*, ' Lacobian:'
+!!!!        DO K=1,NPEN
+!!!!          PRINT*, IT_LACOB(K,:)
+!!!!        ENDDO
+!!!!        PRINT*, ' Lessian:'
+!!!!        DO K=1,SIZE(SAMPLED_MOD)
+!!!!          PRINT*, PEN_HSS(:,K)
+!!!!        ENDDO
         DEALLOCATE(IT_LACOB)
-!        PRINT*, ','
-!        PRINT*, PEN_RES
-!        PRINT*, ','
-!        DO K=1,SIZE(PEN_RES)
-!          PRINT*, PEN_HSS(:,K)
-!        ENDDO
-
+!!!!!        DEALLOCATE(ITZ)
 
         JI=JI+JD
 
+        NULLIFY(PTR_COEF)
+        NULLIFY(PTR_MODEL)
+        NULLIFY(PTR_ZMODEL)
       ENDIF ! Do I invert that parameter?
     ENDDO ! Inv. parameters
-
+!!!!    PRINT*, ' sampled mod:', SAMPLED_MOD
+!print*, ' Check if this is working!!'
+!stop
     !
   END SUBROUTINE GET_IT_PENALTIES
   !
@@ -1608,15 +1715,14 @@ ENDIF
     ! ... value of this criterium:
     CALL CONTRACT_VECTOR(NJ, IPAR, COEFS, AVGPAR)
     !
-    IF (ABSOLUTE.GT.0) THEN
-      DO J=1,NJ
-        PERTURBATION(J)=MAXVAL((/ABSOLUTE,(ABS(MPERT*AVGPAR(J)))/))
-      ENDDO
-    ELSE
-      DO J=1,NJ
+    DO J=1,NJ
+      IF (ABSOLUTE.GT.0) THEN
+        PERTURBATION(J)=MINVAL((/ABSOLUTE,(ABS(MPERT*AVGPAR(J)))/))
+      ELSE
         PERTURBATION(J)=ABS(MPERT*AVGPAR(J))
-      ENDDO
-    ENDIF
+      ENDIF
+      IF (AVGPAR(J).EQ.0) PERTURBATION(J)=ABSOLUTE
+    ENDDO
     !
     !
     DO J=1,NJ
@@ -1624,12 +1730,21 @@ ENDIF
         ITDELTA(J)=ITDELTA(J)/ABS(ITDELTA(J))*PERTURBATION(J)
       ENDIF
     ENDDO
+!PRINT*, ITDELTA(:)
     PTR_DELTA(JOFFSET+1:JOFFSET+NJ)=ITDELTA(:)
     !
     !
     !
     ! SIR/NICOLE like perts:
     IF (INVERSIONTYPE.EQ.0) THEN
+      DO J=1,NJ
+        IF (AVGPAR(J)+ITDELTA(J).LT.INF) THEN
+          ITDELTA(J) = INF - AVGPAR(J)
+        ENDIF
+        IF (AVGPAR(J)+ITDELTA(J).GT.SUP) THEN
+          ITDELTA(J) = SUP - AVGPAR(J)
+        ENDIF
+      ENDDO
       CALL EXPAND_VECTOR(NJ, ITDELTA, COEFS, NZPERT)
 !
       OPAR(:)=IPAR(:)+REAL(NZPERT)
@@ -1731,7 +1846,7 @@ ENDIF
       UPPLIM(8)=1.0D12
       !
       IF (CURIC.EQ.1) THEN
-        ABSFACTOR(1)=-1.0D4
+        ABSFACTOR(1)=-100.!-1.0D4
         ABSFACTOR(2)=-1.0D6
         ABSFACTOR(3)=-1.0D2
         ABSFACTOR(4)=987.654D0
@@ -1740,7 +1855,7 @@ ENDIF
         ABSFACTOR(7)=98765.4321D0
         ABSFACTOR(8)=-1.0D0
       ELSE
-        ABSFACTOR(1)=-1.0D5
+        ABSFACTOR(1)=-100.0!-1.0D5
         ABSFACTOR(2)=-1.0D7
         ABSFACTOR(3)=-1.0D2
         ABSFACTOR(4)=98.7654D0
@@ -1794,7 +1909,7 @@ ENDIF
         !
         CALL SORT_DELTA_TO_ATMOSPHERE(PTR_DELTA,PTR_FACTORS(I) &
             ,PTR_MODEL,VPAR,JPAR,LOWLIM(I),UPPLIM(I) &
-            , SIZE(PTR_COEF,2), PTR_COEF, ABSFACTOR(I))
+            , SIZE(PTR_COEF,2), PTR_COEF, PARAM_NORMS(I)*MPERT)!ABSFACTOR(I))
         !
 !IF (.FALSE.) THEN
         IF (INVERSIONTYPE.EQ.0) THEN
@@ -2083,6 +2198,49 @@ PRINT*, 'Weights: ', WSTK, 'NUMW: ', NUMW
   !
   !================================================
   !
+SUBROUTINE PERT_TEMP(NJ,NZ,ARR,PER,I,PSIZE)
+
+  INTEGER, INTENT(IN) :: NJ,NZ
+  REAL(SP), DIMENSION(NZ), INTENT(INOUT) :: ARR
+  REAL(DP), INTENT(IN) :: PER
+  INTEGER, INTENT(IN) :: I
+  REAL(DP), INTENT(INOUT) :: PSIZE
+
+  REAL(DP), DIMENSION(NJ) :: AVGPAR
+  REAL(DP), DIMENSION(NZ) :: NZPERT
+  INTEGER :: J
+
+!  PRINT*, ' In pert_temp: ', NJ, NZ, SHAPE(ARR), PER, I
+  PRINT*, SUM(ARR)
+
+!  PRINT*, SHAPE(TM_COEFS)
+  CALL CONTRACT_VECTOR(NJ, ARR, TM_COEFS, AVGPAR)
+
+!  PRINT*, AVGPAR
+
+  DO J=1,NJ
+    IF (J.EQ.I) THEN
+      AVGPAR(J)=PER*AVGPAR(J)
+      PSIZE=AVGPAR(J)
+    ELSE
+      AVGPAR(J)=0.0D0
+    ENDIF
+  ENDDO
+
+  !PRINT*, AVGPAR
+  CALL EXPAND_VECTOR(NJ, AVGPAR, TM_COEFS, NZPERT)
+  !PRINT*, NZPERT
+
+  ARR(:)=ARR(:)+REAL(NZPERT(:))
+
+!  CALL CONTRACT_VECTOR(NJ, ARR, TM_COEFS, AVGPAR)
+!
+!  PRINT*, AVGPAR
+
+
+END SUBROUTINE PERT_TEMP
+
+
 END MODULE GET_DMODEL
 !
 

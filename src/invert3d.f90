@@ -5,7 +5,8 @@ MODULE INVERSION
   !
   USE CODE_MODES, ONLY: TWODSPATIALSPD, COUPLED &
       , MSYNTHESIS, MRESPFUNCT, NAMEMODEL, NAMEPROFILE &
-      , MGETTAU, MINVERSION, MGETHEQ, VREGULARIZATION
+      , MGETTAU, MINVERSION, MGETHEQ, VREGULARIZATION &
+      , MPROGRES
   USE INVERT_PARAM, ONLY: INV_ATMPAR, MAXITER, NFREQ &
       , CURIC, IMASK, AM_I_DONE, INV_MAS, INV_STK &
       , NSTKINV, STOP_CRIT, IFREEP, JACOB, DELTA &
@@ -20,7 +21,7 @@ MODULE INVERSION
   USE GET_DMODEL, ONLY: GET_DMODEL3DC, GET_DMODEL3DS &
       , IFREE_VAR_SPACE, SET_WEIGHTS
   USE GRID_PARAM, ONLY: NZ,NY,NX, ZZ, YY, XX
-  USE CONS_PARAM, ONLY: HPLA, LIGHT, KBOL, DP
+  USE CONS_PARAM, ONLY: HPLA, LIGHT, KBOL, DP, SP
   USE PHYS_PARAM
   !
   USE FORWARD_PARAM, ONLY: NUMW, PIXEL_INI, PIXEL_END &
@@ -55,18 +56,26 @@ MODULE INVERSION
   !
   SUBROUTINE INVERT3D()
     !
-    !NEW: USE GET_DMODEL, ONLY: GET_DMODEL()
+!!!!!!!!!!!!!!    USE GET_DMODEL, ONLY: PERT_TEMP
     !
     INTEGER                   :: I
     LOGICAL                   :: STOP_ITERATION!, CRFS
     INTEGER                   :: CRFS
     INTEGER                   :: IITER
     !
+!!!!!!!!!!!!!!    REAL(SP), DIMENSION(:), ALLOCATABLE :: BUPAR
+!!!!!!!!!!!!!!    REAL(SP), DIMENSION(:), ALLOCATABLE :: BUOBS
+!!!!!!!!!!!!!!    REAL(SP), DIMENSION(:), ALLOCATABLE :: BUDSYN
+!!!!!!!!!!!!!!    REAL(DP) :: PPOS, PNEG
+!!!!!!!!!!!!!!    INTEGER :: IP
+    !
     IF (mpi__myrank.EQ.0) PRINT*, 'INVERSION3D:'
     !
     WSET=.FALSE.
     IITER=1
-    IF (VREGULARIZATION) IITER=MAXITER
+    IF (VREGULARIZATION) THEN
+      IF (MPROGRES.EQV..FALSE.) IITER=MAXITER
+    ENDIF
     ! If we are inverting, maxiter is greater or equal 1
     DO I=IITER,MAXITER
       !
@@ -75,6 +84,56 @@ MODULE INVERSION
       DO WHILE (STOP_ITERATION)
         !
         CALL MODELLING(CRFS)
+!!!!!!!!!!!!!!!!!!!!IF (mpi__myrank.eq.0) then
+!!!!!!!!!!!!!!!!!!!!PRINT*, 'Here?'
+!!!!!!!!!!!!!!!!!!!!PRINT*, SHAPE(DSYN)
+!!!!!!!!!!!!!!!!!!!!PRINT*, SUM(ABS(DSYN))
+!!!!!!!!!!!!!!!!!!!!! Take numerical derivatives:
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!      IP=170
+!!!!!!!!!!!!!!!!!!!!      IP=2
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!      PRINT*, SHAPE(TEM3D)
+!!!!!!!!!!!!!!!!!!!!      PRINT*, SUM(TEM3D)
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!      ALLOCATE(BUPAR(NZ))
+!!!!!!!!!!!!!!!!!!!!      ALLOCATE(BUOBS(NFREQ))
+!!!!!!!!!!!!!!!!!!!!      ALLOCATE(BUDSYN(NFREQ))
+!!!!!!!!!!!!!!!!!!!!      BUPAR(:)=TEM3D(:,1,1)
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!PRINT*, 'to pert_temp: ', IFREEP,NZ
+!!!!!!!!!!!!!!!!!!!!      BUDSYN(:) = DSYN(:,IP,1,1)
+!!!!!!!!!!!!!!!!!!!!      PRINT*, 'A:', DSYN(:,IP,1,1)
+!!!!!!!!!!!!!!!!!!!!      PRINT*, 'A:', BUDSYN
+!!!!!!!!!!!!!!!!!!!!      !PPOS = 0.05D0 * TEM3D(IP,1,1)
+!!!!!!!!!!!!!!!!!!!!      !TEM3D(IP,1,1)=TEM3D(IP,1,1) + PPOS
+!!!!!!!!!!!!!!!!!!!!      CALL PERT_TEMP(IFREEP,NZ,TEM3D(:,1,1),0.05D0,IP,PPOS)
+!!!!!!!!!!!!!!!!!!!!endif
+!!!!!!!!!!!!!!!!!!!!      MRESPFUNCT=.FALSE.
+!!!!!!!!!!!!!!!!!!!!      CALL FORWARD3D()
+!!!!!!!!!!!!!!!!!!!!IF (mpi__myrank.eq.0) then
+!!!!!!!!!!!!!!!!!!!!      BUOBS(:) = SYN3D(:,1,1)
+!!!!!!!!!!!!!!!!!!!!      TEM3D(:,1,1) = BUPAR(:)
+!!!!!!!!!!!!!!!!!!!!      !PNEG = - 0.05D0 * TEM3D(IP,1,1)
+!!!!!!!!!!!!!!!!!!!!      !TEM3D(IP,1,1)=TEM3D(IP,1,1) + PNEG
+!!!!!!!!!!!!!!!!!!!!      CALL PERT_TEMP(IFREEP,NZ,TEM3D(:,1,1),-0.05D0,IP,PNEG)
+!!!!!!!!!!!!!!!!!!!!endif
+!!!!!!!!!!!!!!!!!!!!      CALL FORWARD3D()
+!!!!!!!!!!!!!!!!!!!!IF (mpi__myrank.eq.0) then
+!!!!!!!!!!!!!!!!!!!!      PRINT*, PPOS, PNEG
+!!!!!!!!!!!!!!!!!!!!      BUOBS(:) = (BUOBS(:) - SYN3D(:,1,1))
+!!!!!!!!!!!!!!!!!!!!      BUOBS(:) = BUOBS(:) / (PPOS-PNEG)
+!!!!!!!!!!!!!!!!!!!!      PRINT*, 'N:', BUOBS(:)
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!      PRINT*, 'A/N=', BUDSYN(:) / BUOBS(:)
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!DEALLOCATE(BUPAR)
+!!!!!!!!!!!!!!!!!!!!DEALLOCATE(BUOBS)
+!!!!!!!!!!!!!!!!!!!!PRINT*, '???'
+!!!!!!!!!!!!!!!!!!!!endif
+!!!!!!!!!!!!!!!!!!!!STOP
         !CALL FORWARD3D()
         !
         ! We now calculate the perturbation to be applied...
@@ -231,7 +290,7 @@ MODULE INVERSION
       ! 4- PRECYC
       INV_MAS(4,:,:)=0.0D0
       ! 9- LAMBDA
-      INV_MAS(9,:,:)=1.0D+0
+      INV_MAS(9,:,:)=1.0D+2
     ENDIF
     !
     IF (TWODSPATIALSPD.EQV..TRUE.) THEN
@@ -282,9 +341,9 @@ ENDIF
     ! ... errors:
     !CALL GET_ERRORS3DS()
     MRESPFUNCT=.FALSE.
-    IF (mpi__myrank.EQ.0) PRINT*, 'BB', SUM(ABS(SYN3D)), 'BB'
+!!    IF (mpi__myrank.EQ.0) PRINT*, 'BB', SUM(ABS(SYN3D)), 'BB'
     CALL FORWARD3D()
-    IF (mpi__myrank.EQ.0) PRINT*, 'BB', SUM(ABS(SYN3D)), 'BB'
+!!    IF (mpi__myrank.EQ.0) PRINT*, 'BB', SUM(ABS(SYN3D)), 'BB'
     MRESPFUNCT=.TRUE.
     !
     !CALL UPDATE_BEST_TO_CURRENT()
@@ -745,14 +804,11 @@ IF (mpi__myrank.EQ.0) PRINT*, '  Assist P:'
     !
     LOGICAL, INTENT(INOUT) :: STOP_IT
     !
-!PRINT*, 'I am ', mpi__myrank, ' Starting MAKE_DECISION'
     IF (mpi__myrank.eq.0) THEN
-      WRITE(*,*) SUM(AM_I_DONE), NX*NY, 'AM I DONE'
-      WRITE(*,*) SUM(INV_MAS(1,:,:))/(1.D0*NX*NY), 'STEPS'&
-          ,MINVAL(INV_MAS(1,:,:)), MAXVAL(INV_MAS(1,:,:))
-      !WRITE(*,*) SUM(INV_MAS(3,:))/(1.D0*NX*NY), 'CHI'
-      WRITE(*,*) SUM(INV_MAS(3,:,:)*IMASK)/(SUM(IMASK)), 'CHI'
-      WRITE(*,*) SUM(INV_MAS(9,:,:))/(1.D0*NX*NY), 'LAMBDA'
+      WRITE(*,*) '<STEPS>=', SUM(INV_MAS(1,:,:))/(1.D0*NX*NY)&
+          ,';',MINVAL(INV_MAS(1,:,:)),';', MAXVAL(INV_MAS(1,:,:))
+      WRITE(*,*) '<CHI>=', SUM(INV_MAS(3,:,:)*IMASK)/(SUM(IMASK))
+      WRITE(*,*) '<LAMBDA>=', SUM(INV_MAS(9,:,:))/(1.D0*NX*NY)
       !
       ! Check for bad pixels. If any, replace it by the surrounding atmosphere
       CALL CHECK_CHI2_XY()
@@ -761,16 +817,16 @@ IF (mpi__myrank.EQ.0) PRINT*, '  Assist P:'
       IF (NX*NY-SUM(AM_I_DONE).EQ.0) THEN
         STOP_CRIT=1
       ENDIF
-      !IF (SUM(INV_MAS(9,:,:))/(1.D0*NX*NY).GE.1.D3) THEN
-!PRINT*, SUM(INV_MAS(9,:,:)*(1.-AM_I_DONE))/SUM(1.0D0-AM_I_DONE), 'AAAAA'
-      IF (SUM(INV_MAS(9,:,:)*(1.-AM_I_DONE))/SUM(1.0D0-AM_I_DONE).GE.1.D3) THEN
-!PRINT*, SUM(INV_MAS(9,:,:)*(1.-AM_I_DONE))
-!PRINT*, SUM(AM_I_DONE), NX*NY
+
+      IF (SUM(INV_MAS(9,:,:)*(1.-AM_I_DONE))/SUM(1.0D0-AM_I_DONE).GE.1.D4) THEN
         STOP_CRIT=1
       ENDIF
-      IF (SUM(INV_MAS(1,:,:))/(1.D0*NX*NY).GE.MAXSTEPS) THEN
+!PRINT*, ' >>>>>>>> ', CURIC, MAXITER, MAXSTEPS, MAXSTEPS-(MAXITER-CURIC)
+      IF (SUM(INV_MAS(1,:,:))/(1.D0*NX*NY).GE.MAX(1,(MAXSTEPS-(MAXITER-CURIC)))) THEN
+      !IF (SUM(INV_MAS(1,:,:))/(1.D0*NX*NY).GE.MAXSTEPS) THEN
         STOP_CRIT=1
       ENDIF
+
     ENDIF ! Master
     !
     ! BROADCAST DECISION FROM MASTER TO SLAVES:
@@ -781,8 +837,6 @@ IF (mpi__myrank.EQ.0) PRINT*, '  Assist P:'
                 ,mpi__ierror)
     !
     IF (STOP_CRIT.GT.0) STOP_IT=.FALSE.
-!PRINT*, 'I am ', mpi__myrank, ' Starting MAKE_DECISION', STOP_CRIT &
-!    ,SUM(AM_I_DONE)
     !
   END SUBROUTINE MAKE_DECISION
   !
