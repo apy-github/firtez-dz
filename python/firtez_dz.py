@@ -858,7 +858,7 @@ def plot_profiles(profiles, pars=['all'] \
   sqrtabove = np.int32(np.ceil(np.sqrt(len(pars))))
   axestorem = 0
   if (len(pars)%2 != 0):
-    ncols=sqrtabove//2*2
+    ncols=np.max([1,sqrtabove//2*2])
     nrows=np.int32(np.ceil((1.*len(pars))/(1.*ncols)))
     axestorem = ncols * nrows - len(pars)
   else:
@@ -895,18 +895,14 @@ def plot_profiles(profiles, pars=['all'] \
       for cnt, itp in enumerate(pars):
 
         itdata = getattr(self, itp)
-        fax[cnt].plot(xtoplot \
-            , itdata[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
+        if (show_labels):
+          fax[cnt].plot(xtoplot \
+              , itdata[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt] \
+              , label=labels[itn])
+        else:
+          fax[cnt].plot(xtoplot \
+              , itdata[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
         del(itdata)
-#      ax[0,0].plot(xtoplot \
-#          , self.stki[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
-#      ax[1,0].plot(xtoplot \
-#          , self.stkq[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
-#      ax[0,1].plot(xtoplot \
-#          , self.stku[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
-#      ax[1,1].plot(xtoplot \
-#          , self.stkv[:,itx[it_nnn],ity[it_nnn]], label=labels[itn] \
-#          , **pkwargs[pltcnt])
 
   nylabel_dict = {}
   nylabel_dict['stki'] = r'I/I$_{{\rm c}}$'
@@ -924,27 +920,9 @@ def plot_profiles(profiles, pars=['all'] \
   if (np.mean(profiles[0].stki)<5.):
     for cnt, itp in enumerate(pars):
       fax[cnt].set_ylabel(nylabel_dict[itp])
-   ### ax[0,0].set_ylabel(r'I/I$_{{\rm c}}$')
-   ### ax[0,1].set_ylabel(r'Q/I$_{{\rm c}}$')
-   ### ax[1,0].set_ylabel(r'U/I$_{{\rm c}}$')
-   ### ax[1,1].set_ylabel(r'V/I$_{{\rm c}}$')
   else:
     for cnt, itp in enumerate(pars):
       fax[cnt].set_ylabel(ylabel_dict[itp])
-#    ax[0,0].set_ylabel(r'I')
-#    ax[0,1].set_ylabel(r'Q')
-#    ax[1,0].set_ylabel(r'U')
-#    ax[1,1].set_ylabel(r'V')
-
-#  if (axis == 'p'):
-#    ax[1,0].set_xlabel(r'$\lambda$ [px]')
-#    ax[1,1].set_xlabel(r'$\lambda$ [px]')
-#
-#  elif (axis == 'w'):
-#    ax[1,0].set_xlabel(r'$\lambda$ [m$\AA$]')
-#    ax[1,1].set_xlabel(r'$\lambda$ [m$\AA$]')
-#
-#
 
   for itn in range(ncols-axestorem):
     if (axis == 'p'):
@@ -972,14 +950,6 @@ def plot_profiles(profiles, pars=['all'] \
       else:
         ax[itn2, itn1].xaxis.set_ticklabels([])
  
-
-
-
-
-
-
-
-
   if (len(rangex)==2):
     lrangex=rangex[0]*1.
     urangex=rangex[1]*1.
@@ -990,7 +960,7 @@ def plot_profiles(profiles, pars=['all'] \
 
   fg.tight_layout()
   if (show_labels):
-    ax[1,1].legend(shadow=True, fancybox=True \
+    ax[-1,-1].legend(shadow=True, fancybox=True \
         , ncol=np.int(np.round(np.sqrt(len(profiles)))))
   pl.draw()
 #, bbox_to_anchor=(0.5,-1.) \
