@@ -1666,77 +1666,9 @@ class atm_model3D(object):
 
   def plot(self, **fkwargs):
 
-    #plot_models([self], **fkwargs)
-    new_plot_models([self], **fkwargs)
+    plot_models([self], **fkwargs)
 
     return
-
-
-###  def plot(self,fnum=1,itx=[0,],ity=[0,], axis='z', pargs=(), pkargs={}, fkwargs={}):
-###
-###    if (type(itx)!=list):
-###      itx=list(itx)
-###    if (type(ity)!=list):
-###      ity=list(ity)
-###
-###    pl.figure(fnum)
-###    pl.clf()
-###    fg,ax=pl.subplots(ncols=3,nrows=3,num=fnum, **fkwargs)
-###
-###    if (axis=='z'):
-###      xtoplot = self.z * 1.e-3
-###    elif(axis=='t'):
-###      xtoplot = self.tau * 1.
-###    else:
-###      print("axis='z' or axis='t'")
-###      return
-###
-###    for it_nnn in range(len(itx)):
-###      ax[0,0].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.tem[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
-###      ax[0,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.pg[itx[it_nnn],ity[it_nnn],:])
-###      ax[0,1].set_yscale('log')
-###      ax[0,2].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.rho[itx[it_nnn],ity[it_nnn],:])
-###      ax[0,2].set_yscale('log')
-###      ax[1,0].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.bx[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
-###      ax[1,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.by[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
-###      ax[1,2].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.bz[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
-###      ax[2,0].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.vz[itx[it_nnn],ity[it_nnn],:]*1.e-5)
-###      if (axis == 'z'):
-###        ax[2,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.tau[itx[it_nnn],ity[it_nnn],:])
-###      elif (axis=='t'):
-###        ax[2,1].step(xtoplot[itx[it_nnn],ity[it_nnn],:], self.z[itx[it_nnn],ity[it_nnn],:] * 1.e-3)
-###    fg.delaxes(ax[2,2])
-###
-###
-###    ax[0,0].xaxis.set_ticklabels('')
-###    ax[0,1].xaxis.set_ticklabels('')
-###    ax[0,2].xaxis.set_ticklabels('')
-###    ax[1,0].xaxis.set_ticklabels('')
-###    ax[1,1].xaxis.set_ticklabels('')
-###
-###    ax[0,0].set_ylabel(r'T [Kk]')
-###    ax[0,1].set_ylabel(r'P$_{g}$ [dyn/cm$^2$]')
-###    ax[0,2].set_ylabel(r'$\rho$ [gr/$cm^3$]')
-###    ax[1,0].set_ylabel(r'B$_{x}$ [KG]')
-###    ax[1,1].set_ylabel(r'B$_{y}$ [KG]')
-###    ax[1,2].set_ylabel(r'B$_{z}$ [KG]')
-###    ax[2,0].set_ylabel(r'v$_{z}$ [km/s]')
-###    if (axis == 'z'):
-###      ax[2,1].set_ylabel(r'$\lg\tau_{5}$')
-###
-###      ax[1,2].set_xlabel(r'z [Mm]')
-###      ax[2,0].set_xlabel(r'z [Mm]')
-###      ax[2,1].set_xlabel(r'z [Mm]')
-###    elif (axis == 't'):
-###      ax[2,1].set_ylabel(r'z [Mm]')
-###
-###      ax[1,2].set_xlabel(r'$\lg\tau_{5}$')
-###      ax[2,0].set_xlabel(r'$\lg\tau_{5}$')
-###      ax[2,1].set_xlabel(r'$\lg\tau_{5}$')
-###
-###    fg.tight_layout()
-###
-###    return
 
   #
   # TV
@@ -1902,271 +1834,7 @@ class atm_model3D(object):
 #
 # START: plot models:
 #
-def plot_models(models,fnum=1,itx=[0,],ity=[0,], axis='z', labels=[] \
-    , rangex=[], zorigin=False, displaytau=False \
-    , skwargs={}, pargs=(), pkargs={}, fkwargs={}):
-
-  # Define some functions for this particular function:
-
-  def get_model_lims(xx, lx, ux, yy, current_lims):
-
-    new_lims = current_lims * 1.
-
-    ww = np.where( (xx-lx) < 0.)[0]
-    it_pxl = ww[np.argmax(xx-lx)]
-    ww = np.where( (xx-ux) > 0.)[0]
-    it_pxu = ww[np.argmin(xx[ww]-ux)]
-          #
-    low=np.min([it_pxl, it_pxu])
-    upp=np.max([it_pxl, it_pxu])
-    test_yl = np.min(yy[low:upp+1])
-    test_yu = np.max(yy[low:upp+1])
-
-    if (test_yl<0.):
-      test_yl=test_yl*1.1
-    if (test_yu<0.):
-      test_yu=test_yu*0.9
-
-    if (test_yl>0.):
-      test_yl=test_yl*0.9
-    if (test_yu>0.):
-      test_yu=test_yu*1.1
-
-    if (test_yl < new_lims[0]):
-      new_lims[0] = test_yl * 1.
-    if (test_yu > new_lims[1]):
-      new_lims[1] = test_yu * 1.
-
-    return new_lims
-
-  def oplot_tau_axis(iax, taus, zs, tauvalues, yval, color):
-  
-  
-    xlims = iax.get_xlim()
-  
-    ftauz = interp1d(taus, zs)
-    zvalues = ftauz(tauvalues)
-  
-    axfracs = (np.array(zvalues) - xlims[0]) / (xlims[1] - xlims[0])
-  
-    iax.plot(axfracs, [yval] * len(axfracs), transform=iax.transAxes, marker='|', color=(1.0,1.,1.), alpha=0.7, linewidth=7, markersize=8)
-    iax.plot(axfracs, [yval] * len(axfracs), transform=iax.transAxes, marker='|', color=color)
-  
-    return
-
-  #
-  # Start the function plot_models itself
-  #
-  # First, some input checks:
-  #
-
-  if (type(itx)!=list):
-    itx=list(itx)
-  if (type(ity)!=list):
-    ity=list(ity)
-  if (type(models)!=list):
-    models=list(models)
-  if (type(labels)!=list):
-    labels=list(labels)
-  if (type(skwargs) != list):
-    skwargs=[skwargs]
-
-  if ( (len(rangex)!=0) & (len(rangex)!=2) ):
-    print('rangex must be a list of two elements or not supplied')
-    return
-
-  show_labels = True
-  if (len(labels)==0):
-    show_labels = False
-    labels = [''] * len(models)
-
-  if ( (len(labels)!=len(models)) ):
-    print("Length of labels must be equal to models' length")
-    print("\tLabels length: %i" % (len(labels),))
-    print("\tLabels models: %i" % (len(models),))
-    return
-
-  if (len(skwargs)==1):
-    skwargs = skwargs * len(models)
-
-  #
-  # Once input checked, plot atmosphere model:
-  #
-  pl.figure(fnum)
-  pl.clf()
-  fg,ax=pl.subplots(ncols=3,nrows=3,num=fnum, **fkwargs)
-  lrangex=1.e99
-  urangex=-1.e99
-  zoffsets = np.zeros((len(models),len(itx)))
-  used_colors = []
-  for itn, self in enumerate(models):
-
-    if (axis=='z'):
-      xtoplot = self.z * 1.e-3
-    elif(axis=='t'):
-      xtoplot = self.tau * 1.
-    else:
-      print("axis='z' or axis='t'")
-      return
-
-    if (np.min(xtoplot)<lrangex):
-      lrangex = np.min(xtoplot)
-    if (np.max(xtoplot)>urangex):
-      urangex = np.max(xtoplot)
-  
-    for it_nnn in range(len(itx)):
-
-      it_xtoplot = xtoplot[itx[it_nnn],ity[it_nnn],:]
-
-      if ( (axis=='z') & (zorigin==True) ):
-        f = interp1d(self.tau[itx[it_nnn],ity[it_nnn],:], it_xtoplot\
-            , bounds_error=False, fill_value="extrapolate")
-        zoffsets[itn, it_nnn] = - (f(0.)-1.)
-        it_xtoplot = it_xtoplot - (f(0.)-1.)
-
-      lin=ax[0,0].step(it_xtoplot \
-          , self.tem[itx[it_nnn],ity[it_nnn],:] * 1.e-3 \
-          , **skwargs[itn])
-      used_colors.append(lin[0].get_color())
-      ax[0,1].step(it_xtoplot \
-          , self.pg[itx[it_nnn],ity[it_nnn],:] \
-          , **skwargs[itn])
-      ax[0,1].set_yscale('log')
-      ax[0,2].step(it_xtoplot \
-          , self.rho[itx[it_nnn],ity[it_nnn],:] \
-          , **skwargs[itn])
-      ax[0,2].set_yscale('log')
-      ax[1,0].step(it_xtoplot \
-          , self.bx[itx[it_nnn],ity[it_nnn],:] * 1.e-3 \
-          , **skwargs[itn])
-      ax[1,1].step(it_xtoplot \
-          , self.by[itx[it_nnn],ity[it_nnn],:] * 1.e-3 \
-          , **skwargs[itn])
-      ax[1,2].step(it_xtoplot \
-          , self.bz[itx[it_nnn],ity[it_nnn],:] * 1.e-3, label=labels[itn] \
-          , **skwargs[itn])
-      ax[2,0].step(it_xtoplot \
-          , self.vz[itx[it_nnn],ity[it_nnn],:]*1.e-5 \
-          , **skwargs[itn])
-      if (axis == 'z'):
-        ax[2,1].step(it_xtoplot \
-          , self.tau[itx[it_nnn],ity[it_nnn],:] \
-          , **skwargs[itn])
-      elif (axis=='t'):
-        ax[2,1].step(it_xtoplot \
-          , self.z[itx[it_nnn],ity[it_nnn],:] * 1.e-3 \
-          , **skwargs[itn])
-
-  ax[0,1].xaxis.set_ticklabels('')
-  ax[0,2].xaxis.set_ticklabels('')
-  ax[1,0].xaxis.set_ticklabels('')
-  ax[1,1].xaxis.set_ticklabels('')
-
-  ax[0,0].set_ylabel(r'T [Kk]')
-  ax[0,1].set_ylabel(r'P$_{g}$ [dyn/cm$^2$]')
-  ax[0,2].set_ylabel(r'$\rho$ [gr/$cm^3$]')
-  ax[1,0].set_ylabel(r'B$_{x}$ [KG]')
-  ax[1,1].set_ylabel(r'B$_{y}$ [KG]')
-  ax[1,2].set_ylabel(r'B$_{z}$ [KG]')
-  ax[2,0].set_ylabel(r'v$_{z}$ [km/s]')
-  if (axis == 'z'):
-    ax[2,1].set_ylabel(r'$\lg\tau_{5}$')
-
-    ax[1,2].set_xlabel(r'z [Mm]')
-    ax[2,0].set_xlabel(r'z [Mm]')
-    ax[2,1].set_xlabel(r'z [Mm]')
-  elif (axis == 't'):
-    ax[2,1].set_ylabel(r'z [Mm]')
-
-    ax[1,2].set_xlabel(r'$\lg\tau_{5}$')
-    ax[2,0].set_xlabel(r'$\lg\tau_{5}$')
-    ax[2,1].set_xlabel(r'$\lg\tau_{5}$')
-
-  if (len(rangex)==2):
-    lrangex=rangex[0]*1.
-    urangex=rangex[1]*1.
-
-    # store ylims:
-    ylims = np.zeros((2,3,3))
-    ylims[0,:,:]=np.inf
-    ylims[1,:,:]=-np.inf
-
-    cnt = 0
-    for it_xxx in range(3):
-      for it_yyy in range(3):
-        cnt+=1
-        ax[it_xxx, it_yyy].set_xlim(lrangex, urangex)
-# Ylimits:
-        for itn, self in enumerate(models):
-          for it_nnn in range(len(itx)):
-            #
-            if (axis=='z'):
-              it_px = self.z[itx[it_nnn],ity[it_nnn],:] * 1.e-3
-            elif (axis=='t'):
-              it_px = self.tau[itx[it_nnn],ity[it_nnn],:] * 1.
-            #
-            if (cnt==1):
-              it_py = self.tem[itx[it_nnn],ity[it_nnn],:] * 1.e-3 
-            if (cnt==2):
-              it_py = self.pg[itx[it_nnn],ity[it_nnn],:] * 1.
-            if (cnt==3):
-              it_py = self.rho[itx[it_nnn],ity[it_nnn],:] * 1.
-            if (cnt==4):
-              it_py = self.bx[itx[it_nnn],ity[it_nnn],:] * 1.e-3
-            if (cnt==5):
-              it_py = self.by[itx[it_nnn],ity[it_nnn],:] * 1.e-3
-            if (cnt==6):
-              it_py = self.bz[itx[it_nnn],ity[it_nnn],:] * 1.e-3
-            if (cnt==7):
-              it_py = self.vz[itx[it_nnn],ity[it_nnn],:]*1.e-5
-            if (cnt==8):
-              if (axis=='z'):
-                it_py = self.tau[itx[it_nnn],ity[it_nnn],:] * 1.
-              elif (axis=='t'):
-                it_py = self.z[itx[it_nnn],ity[it_nnn],:] * 1.e-3
-
-            ylims[:,it_xxx, it_yyy] = get_model_lims(it_px \
-                , lrangex, urangex, it_py, ylims[:,it_xxx, it_yyy])
-
-        var = (ylims[1,it_xxx, it_yyy]-ylims[0,it_xxx, it_yyy])/np.max(np.abs(ylims[:,it_xxx, it_yyy]))
-        if ( (var > 0.01) & (np.abs(var) != np.inf) & (var==var) ):
-          ax[it_xxx, it_yyy].set_ylim(ylims[0,it_xxx, it_yyy], ylims[1,it_xxx, it_yyy])
-
-  if (axis=='z'):
-    htau = [0.,-1.,-2.,-3.]
-    for it_xxx in range(3):
-      for it_yyy in range(3):
-        if (zorigin==True):
-          ax[it_xxx, it_yyy].axvline(1., color=(0.6,0.6,0.6), linewidth=1., linestyle='--')
-    if (displaytau==True):
-      cnt=-1
-      for itn, self in enumerate(models):
-        for it_nnn in range(len(itx)):
-          cnt+=1
-          it_px = self.z[itx[it_nnn],ity[it_nnn],:] * 1.e-3
-          it_py = self.tau[itx[it_nnn],ity[it_nnn],:] * 1.
-          #
-          oplot_tau_axis(ax[0,1], it_py, it_px+zoffsets[itn,it_nnn], htau, 0.95-0.05*cnt, used_colors[cnt])
-
-
-  fg.delaxes(ax[2,2])
-
-  ax[0,0].xaxis.set_ticklabels('')
-
-  fg.tight_layout()
-  if (show_labels):
-    ax[1,2].legend(loc=8,shadow=True, fancybox=True, bbox_to_anchor=(0.5,-1.) \
-        , ncol=np.int(np.round(np.sqrt(len(models)))))
-
-  return
-
-#
-# END: plot models.
-#
-#
-# START: new plot models:
-#
-def new_plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=[] \
+def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=[] \
     , rangex=[], zorigin=False, displaytau=True \
     , skwargs={}, pargs=(), pkargs={}, fkwargs={}):
 
@@ -2266,7 +1934,7 @@ def new_plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', lab
   sqrtabove = np.int16(np.ceil(np.sqrt(len(pars))))
   axestorem = 0
   if (len(pars)%2 != 0):
-    ncols=sqrtabove//2*2
+    ncols=np.max([1,sqrtabove//2*2])
     nrows=np.int16(np.ceil((1.*len(pars))/(1.*ncols)))
     axestorem = ncols * nrows - len(pars)
   else:
@@ -2280,12 +1948,12 @@ def new_plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', lab
   if (not ('figsize' in fkwargs)):
     autofigsize=1
     xs, ys = pl.rcParams['figure.figsize']
-    nxs = nrows/2.*xs
-    nys = ys * ncols
+    nxs = ncols / 1.*np.max([8.,xs])
+    nys = np.max([4.,ys]) * nrows
     pl.rcParams.update({'figure.figsize':(nxs,nys)})
   #
   pl.close(fnum)
-  fg,ax=pl.subplots(ncols=ncols,nrows=nrows,num=fnum, **fkwargs)
+  fg,ax=pl.subplots(ncols=ncols,nrows=nrows,num=fnum, squeeze=False, **fkwargs)
   fax = ax.flatten()
   lrangex=1.e99
   urangex=-1.e99
