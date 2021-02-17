@@ -39,7 +39,7 @@ MODULE GET_DMODEL
   PUBLIC :: GET_DMODEL3DS
   PUBLIC :: IFREE_VAR_SPACE
   PUBLIC :: SET_WEIGHTS
-  PUBLIC :: PERT_TEMP
+  !PUBLIC :: PERT_TEMP
   PRIVATE
   !
   !************************************************
