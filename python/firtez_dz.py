@@ -31,8 +31,6 @@ def read_profile(fname, fmt_type=np.float32):
 
   def read_profile3D_v3(ofile, nrec, dims, fmt_type):
   
-    from pdb import set_trace as stop
-  
     nx, ny, nw, ns = np.int16(dims)
   
     profile3D = stk_profile3D(nw, nx, ny)
@@ -392,64 +390,6 @@ class stk_profile3D(object):
     plot_profiles([self], **fkwargs)
 
     return
-
-#  def plot(self,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
-#    , rangex=[], pkwargs={} \
-#    , pargs=(), pkargs={}, fkwargs={}):
-#
-#    plot_profiles([self], fnum=fnum, itx=itx, ity=ity, axis=axis, labels=labels \
-#        , rangex=[], pkwargs={}, pargs=(), pkargs={}, fkwargs=f)
-#
-#
-#    return
-#  def plot(self,fnum=1,itx=[0,],ity=[0,], axis='w' \
-#      , pkwargs={}, fkwargs={}):
-#
-#    if (type(itx)!=list):
-#      itx=list(itx)
-#    if (type(ity)!=list):
-#      ity=list(ity)
-#
-#    if (axis=='p'):
-#      xtoplot = np.arange(self.nw)
-#    elif(axis=='w'):
-#      xtoplot = self.wave * 1.
-#    else:
-#      print("axis='p' or axis='w'")
-#      return
-#
-#    pl.figure(fnum)
-#    pl.clf()
-#    fg,ax=pl.subplots(ncols=2,nrows=2,num=fnum,sharex=True, **fkwargs)
-#    for it_nnn in range(len(itx)):
-#      ax[0,0].plot(xtoplot, self.stki[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
-#      ax[1,0].plot(xtoplot, self.stkq[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
-#      ax[0,1].plot(xtoplot, self.stku[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
-#      ax[1,1].plot(xtoplot, self.stkv[:,itx[it_nnn],ity[it_nnn]], **pkwargs)
-#    #ax[1,0].xaxis.set_ticks_position('right')
-#
-#    if (np.mean(self.stki)<5.):
-#      ax[0,0].set_ylabel(r'I/I$_{{\rm c}}$')
-#      ax[0,1].set_ylabel(r'Q/I$_{{\rm c}}$ [$\times10^{3}$]')
-#      ax[1,0].set_ylabel(r'U/I$_{{\rm c}}$ [$\times10^{3}$]')
-#      ax[1,1].set_ylabel(r'V/I$_{{\rm c}}$ [$\times10^{3}$]')
-#    else:
-#      ax[0,0].set_ylabel(r'I')
-#      ax[0,1].set_ylabel(r'Q [$\times10^{3}$]')
-#      ax[1,0].set_ylabel(r'U [$\times10^{3}$]')
-#      ax[1,1].set_ylabel(r'V [$\times10^{3}$]')
-#
-#    if (axis == 'p'):
-#      ax[1,0].set_xlabel(r'$\lambda$ [px]')
-#      ax[1,1].set_xlabel(r'$\lambda$ [px]')
-#
-#    elif (axis == 'w'):
-#      ax[1,0].set_xlabel(r'$\lambda$ [m$\AA$]')
-#      ax[1,1].set_xlabel(r'$\lambda$ [m$\AA$]')
-#
-#      fg.tight_layout()
-#
-#    return
   #
   # TV
   #
@@ -897,8 +837,8 @@ def plot_profiles(profiles, pars=['all'] \
         itdata = getattr(self, itp)
         if (show_labels):
           fax[cnt].plot(xtoplot \
-              , itdata[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt] \
-              , label=labels[itn])
+              , itdata[:,itx[it_nnn],ity[it_nnn]], label=labels[itn] \
+              , **pkwargs[pltcnt])
         else:
           fax[cnt].plot(xtoplot \
               , itdata[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
@@ -988,7 +928,6 @@ def read_model(fname, fmt_type=np.float32, devel=False):
       print('\tIs it a 3D model file?')
       return np.nan
   
-    #from pdb import set_trace as stop
     model3D = atm_model3D(nx, ny, nz)
 
     ipar = 0
@@ -1119,7 +1058,6 @@ def read_model(fname, fmt_type=np.float32, devel=False):
   if (np.abs(vers-3.) < 1.e-3):
     #VERSION 3
     if (devel==False):
-      print("Not-developing!")
       model3D = read_model3D_v3(f,nrec,first_rec[5:],fmt_type)
     else:
       model3D = dev_read_model3D_v3(f,nrec,first_rec[5:],fmt_type)
@@ -2414,8 +2352,6 @@ def read_logtaus(fname, fmt_type=np.float32):
   def read_ltau_v3(ofile, nrec, dims, fmt_type):
   
     nx, ny, nz, nw = np.int64(dims)
-    #from pdb import set_trace as stop
-    #stop()
   
     # WE ONLY READ A SINGLE X POSITION, OTHERWISE WE CAN...
     # ...RUN OUT OF MEMORY
@@ -2493,8 +2429,6 @@ def read_logtaus(fname, fmt_type=np.float32):
 def read(fname, fmt_type=np.float32, devel=False, itx=-1):
 
   def read_profile3D_v3(ofile, nrec, dims, fmt_type):
-  
-    from pdb import set_trace as stop
   
     nx, ny, nw, ns = np.int16(dims)
   

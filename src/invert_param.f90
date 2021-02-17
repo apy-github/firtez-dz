@@ -69,7 +69,6 @@ MODULE INVERT_PARAM
   !
    INTEGER, PUBLIC                               :: NJEVALS
    INTEGER, PUBLIC                               :: IFREEP
-   INTEGER, PUBLIC                               :: SVDTOL
   !
    INTEGER, PUBLIC, ALLOCATABLE, DIMENSION(:)    :: INTERVALS
   !

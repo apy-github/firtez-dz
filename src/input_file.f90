@@ -1339,6 +1339,8 @@ ENDIF
       IF(INLINE(J:J).EQ.'.') ISREAL=1
       IF(INLINE(J:J).EQ.'E') ISEXP=J
       IF(INLINE(J:J).EQ.'e') ISEXP=J
+      IF(INLINE(J:J).EQ.'D') ISEXP=J
+      IF(INLINE(J:J).EQ.'d') ISEXP=J
     ENDDO
     !
     IF (ISREAL.NE.1) THEN
@@ -1354,7 +1356,6 @@ ENDIF
         ENDIF
       !ENDIF
     ELSE ! The number is real:
-      !IF (ILOGIC.EQV..TRUE.) THEN
         IF (ISEXP.EQ.0) THEN
           READ(INLINE, '(f14.4)') DVAL
         ELSE
@@ -1362,7 +1363,6 @@ ENDIF
           READ(INLINE(ISEXP+1:LEN(INLINE)), '(i14)') IVAL
           DVAL=DVAL*10.0D0**(IVAL)
         ENDIF
-      !ENDIF
     ENDIF
     !
   END SUBROUTINE GET_NUMBER

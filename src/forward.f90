@@ -146,18 +146,20 @@ call keep_workers_waiting()
             ! Send send atmospheric parameters:
           !!!!  CALL MPI_SEND(MODEL1D_SND,NZ*ATM_ARGS,MPI_REAL,M+1,1 &
           !!!!      ,MPI_COMM_WORLD,mpi__ierror)
-            CALL MPI_ISEND(buffer(1:size1,m+1),size1,MPI_integer,M+1,21 &
-                ,MPI_COMM_WORLD,mpi__vrequest(m+1),mpi__ierror)
+            CALL MPI_SEND(buffer(1:size1,m+1),size1,MPI_integer,M+1,21 &
+                ,MPI_COMM_WORLD,mpi__ierror)
+            !!!!!CALL MPI_ISEND(buffer(1:size1,m+1),size1,MPI_integer,M+1,21 &
+            !!!!!    ,MPI_COMM_WORLD,mpi__vrequest(m+1),mpi__ierror)
             ! Update M
             M=M+1
           ENDDO
           !
           ! EVERYTHING SENT
-          M=0
-          DO WHILE (M.LT.max_work)
-            CALL MPI_WAIT(mpi__vrequest(m+1), mpi__status, mpi__ierror)
-            M=M+1
-          ENDDO
+!!!          M=0
+!!!          DO WHILE (M.LT.max_work)
+!!!            CALL MPI_WAIT(mpi__vrequest(m+1), mpi__status, mpi__ierror)
+!!!            M=M+1
+!!!          ENDDO
           ! NOW, RECEIVE RESULTS:
           J=RJ
           I=RI
@@ -189,8 +191,10 @@ call keep_workers_waiting()
 
 !!!!!!!!!!!              CALL MPI_RECV(BUFFER(1:SIZE2,m+1),SIZE2,MPI_INTEGER,M+1,20&
 !!!!!!!!!!!                  ,MPI_COMM_WORLD, MPI__STATUS,mpi__ierror)
-              CALL MPI_IRECV(BUFFER(1:SIZE2,M+1),SIZE2,MPI_INTEGER,M+1,20&
-                  ,MPI_COMM_WORLD, mpi__vrequest(m+1),mpi__ierror)
+!!              CALL MPI_IRECV(BUFFER(1:SIZE2,M+1),SIZE2,MPI_INTEGER,M+1,20&
+!!                  ,MPI_COMM_WORLD, mpi__vrequest(m+1),mpi__ierror)
+              CALL MPI_RECV(BUFFER(1:SIZE2,M+1),SIZE2,MPI_INTEGER,M+1,20&
+                  ,MPI_COMM_WORLD, mpi__status, mpi__ierror)
 
 
             M=M+1
@@ -210,7 +214,7 @@ call keep_workers_waiting()
             IF (AM_I_DONE(J-1,I).GT.0.5) CYCLE
 
 
-            CALL MPI_WAIT(mpi__vrequest(m+1), mpi__status, mpi__ierror)
+!!!!!            CALL MPI_WAIT(mpi__vrequest(m+1), mpi__status, mpi__ierror)
 
               bpos2=0
 

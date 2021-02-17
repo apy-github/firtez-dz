@@ -56,18 +56,11 @@ MODULE INVERSION
   !
   SUBROUTINE INVERT3D()
     !
-!!!!!!!!!!!!!!    USE GET_DMODEL, ONLY: PERT_TEMP
-    !
     INTEGER                   :: I
     LOGICAL                   :: STOP_ITERATION!, CRFS
     INTEGER                   :: CRFS
     INTEGER                   :: IITER
-    !
-!!!!!!!!!!!!!!    REAL(SP), DIMENSION(:), ALLOCATABLE :: BUPAR
-!!!!!!!!!!!!!!    REAL(SP), DIMENSION(:), ALLOCATABLE :: BUOBS
-!!!!!!!!!!!!!!    REAL(SP), DIMENSION(:), ALLOCATABLE :: BUDSYN
-!!!!!!!!!!!!!!    REAL(DP) :: PPOS, PNEG
-!!!!!!!!!!!!!!    INTEGER :: IP
+    INTEGER                   :: CNT
     !
     IF (mpi__myrank.EQ.0) PRINT*, 'INVERSION3D:'
     !
@@ -77,6 +70,7 @@ MODULE INVERSION
       IF (MPROGRES.EQV..FALSE.) IITER=MAXITER
     ENDIF
     ! If we are inverting, maxiter is greater or equal 1
+    CNT = 0
     DO I=IITER,MAXITER
       !
       CALL INITIALIZE_CYCLE(I,STOP_ITERATION,CRFS)
@@ -84,64 +78,14 @@ MODULE INVERSION
       DO WHILE (STOP_ITERATION)
         !
         CALL MODELLING(CRFS)
-!!!!!!!!!!!!!!!!!!!!IF (mpi__myrank.eq.0) then
-!!!!!!!!!!!!!!!!!!!!PRINT*, 'Here?'
-!!!!!!!!!!!!!!!!!!!!PRINT*, SHAPE(DSYN)
-!!!!!!!!!!!!!!!!!!!!PRINT*, SUM(ABS(DSYN))
-!!!!!!!!!!!!!!!!!!!!! Take numerical derivatives:
-!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!      IP=170
-!!!!!!!!!!!!!!!!!!!!      IP=2
-!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!      PRINT*, SHAPE(TEM3D)
-!!!!!!!!!!!!!!!!!!!!      PRINT*, SUM(TEM3D)
-!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!      ALLOCATE(BUPAR(NZ))
-!!!!!!!!!!!!!!!!!!!!      ALLOCATE(BUOBS(NFREQ))
-!!!!!!!!!!!!!!!!!!!!      ALLOCATE(BUDSYN(NFREQ))
-!!!!!!!!!!!!!!!!!!!!      BUPAR(:)=TEM3D(:,1,1)
-!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!PRINT*, 'to pert_temp: ', IFREEP,NZ
-!!!!!!!!!!!!!!!!!!!!      BUDSYN(:) = DSYN(:,IP,1,1)
-!!!!!!!!!!!!!!!!!!!!      PRINT*, 'A:', DSYN(:,IP,1,1)
-!!!!!!!!!!!!!!!!!!!!      PRINT*, 'A:', BUDSYN
-!!!!!!!!!!!!!!!!!!!!      !PPOS = 0.05D0 * TEM3D(IP,1,1)
-!!!!!!!!!!!!!!!!!!!!      !TEM3D(IP,1,1)=TEM3D(IP,1,1) + PPOS
-!!!!!!!!!!!!!!!!!!!!      CALL PERT_TEMP(IFREEP,NZ,TEM3D(:,1,1),0.05D0,IP,PPOS)
-!!!!!!!!!!!!!!!!!!!!endif
-!!!!!!!!!!!!!!!!!!!!      MRESPFUNCT=.FALSE.
-!!!!!!!!!!!!!!!!!!!!      CALL FORWARD3D()
-!!!!!!!!!!!!!!!!!!!!IF (mpi__myrank.eq.0) then
-!!!!!!!!!!!!!!!!!!!!      BUOBS(:) = SYN3D(:,1,1)
-!!!!!!!!!!!!!!!!!!!!      TEM3D(:,1,1) = BUPAR(:)
-!!!!!!!!!!!!!!!!!!!!      !PNEG = - 0.05D0 * TEM3D(IP,1,1)
-!!!!!!!!!!!!!!!!!!!!      !TEM3D(IP,1,1)=TEM3D(IP,1,1) + PNEG
-!!!!!!!!!!!!!!!!!!!!      CALL PERT_TEMP(IFREEP,NZ,TEM3D(:,1,1),-0.05D0,IP,PNEG)
-!!!!!!!!!!!!!!!!!!!!endif
-!!!!!!!!!!!!!!!!!!!!      CALL FORWARD3D()
-!!!!!!!!!!!!!!!!!!!!IF (mpi__myrank.eq.0) then
-!!!!!!!!!!!!!!!!!!!!      PRINT*, PPOS, PNEG
-!!!!!!!!!!!!!!!!!!!!      BUOBS(:) = (BUOBS(:) - SYN3D(:,1,1))
-!!!!!!!!!!!!!!!!!!!!      BUOBS(:) = BUOBS(:) / (PPOS-PNEG)
-!!!!!!!!!!!!!!!!!!!!      PRINT*, 'N:', BUOBS(:)
-!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!      PRINT*, 'A/N=', BUDSYN(:) / BUOBS(:)
-!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!DEALLOCATE(BUPAR)
-!!!!!!!!!!!!!!!!!!!!DEALLOCATE(BUOBS)
-!!!!!!!!!!!!!!!!!!!!PRINT*, '???'
-!!!!!!!!!!!!!!!!!!!!endif
-!!!!!!!!!!!!!!!!!!!!STOP
-        !CALL FORWARD3D()
         !
         ! We now calculate the perturbation to be applied...
         ! ...consistent with the previous modelizing:
         CALL SOLVE_DMODEL()
-        ! NEW: CALL GET_DMODEL()
         !
         CALL MAKE_DECISION(STOP_ITERATION)
+    CNT = CNT + 1
+    !IF (CNT.GT.1) EXIT
         !
       ENDDO
       !
@@ -290,7 +234,7 @@ MODULE INVERSION
       ! 4- PRECYC
       INV_MAS(4,:,:)=0.0D0
       ! 9- LAMBDA
-      INV_MAS(9,:,:)=1.0D+2
+      INV_MAS(9,:,:)=1.0D+1
     ENDIF
     !
     IF (TWODSPATIALSPD.EQV..TRUE.) THEN
