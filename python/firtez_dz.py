@@ -89,6 +89,15 @@ def read_profile(fname, fmt_type=np.float32):
 class stk_profile3D(object):
 
   def __init__(self, nw, nx, ny):
+    """
+      Special method to initialize firtez-dz class:
+
+        Inputs:
+          1/3- nw: integer, number of wavelengths
+          2/3- nx: integer, number of pixels in x direction
+          3/3- ny: integer, number of pixels in y direction
+
+    """
 
     self.nw = nw * 1
     self.nx = nx * 1
@@ -105,8 +114,105 @@ class stk_profile3D(object):
     self.set_tv_defaults()
 
     return
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __repr__(self):
+    """
+      Special method 'repr':
+    """
 
+    return "\n\tFirtez-dz Stokes class."
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __add__(self, stkcls_to_add):
+    """
+      Special method :
+    """
 
+    #
+    # Check alignment:
+    if ( (self.nx!=stkcls_to_add.nx) | (self.ny!=stkcls_to_add.ny) ):
+      print("")
+      print("\tError!")
+      print("\tProfiles to add are not aligned!")
+      print("")
+      return np.nan
+
+    out = stk_profile3D(self.nw+stkcls_to_add.nw, self.nx, self.ny)
+
+    for itp in ["indx","wave","stki","stkq","stku","stkv"]:
+      if (not itp in out):
+        #
+        # Second 
+        from pdb import set_trace as stop
+        stop()
+      out[itp] = np.concatenate([self[itp],stkcls_to_add[itp]], axis=0)
+        
+
+    return out
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __iadd__(self, stkcls_to_add):
+    """
+      Special method :
+    """
+
+    #
+    # Check alignment:
+    if ( (self.nx!=stkcls_to_add.nx) | (self.ny!=stkcls_to_add.ny) ):
+      print("")
+      print("\tError!")
+      print("\tProfiles to add are not aligned!")
+      print("")
+      return np.nan
+
+    for itp in ["indx","wave","stki","stkq","stku","stkv"]:
+      if (not itp in self):
+        #
+        # Second 
+        from pdb import set_trace as stop
+        stop()
+      self[itp] = np.concatenate([self[itp],stkcls_to_add[itp]], axis=0)
+ 
+    self.shape = self.stki.shape
+
+    return self
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __getitem__(self, key):
+    """
+      Special method :
+    """
+    return getattr(self, key)
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __setitem__(self, key, item):
+    """
+      Special method :
+    """
+    setattr(self, key, item)
+
+    return
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __contains__(self, item):
+    """
+      Special method :
+    """
+
+    if (item in self.__dict__.keys()):
+      return True
+    else:
+      return False
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
   def set_tv_defaults(self):
 
     cmaps = {}
