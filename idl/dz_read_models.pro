@@ -79,9 +79,9 @@ RETURN, {name:'' $
     , by:REFORM(TRANSPOSE(REFORM(data[*,*,*,4],nz,ny,nx),[2,1,0]),nx,ny,nz) $
     , bz:REFORM(TRANSPOSE(REFORM(data[*,*,*,5],nz,ny,nx),[2,1,0]),nx,ny,nz) $
     , vz:REFORM(TRANSPOSE(REFORM(data[*,*,*,6],nz,ny,nx),[2,1,0]),nx,ny,nz) $
-    , tau:REFORM(TRANSPOSE(REFORM(data[*,*,*,7],nz,ny,nx),[2,1,0]),nx,ny,nz) $
-    , pel:REFORM(TRANSPOSE(REFORM(data[*,*,*,8],nz,ny,nx),[2,1,0]),nx,ny,nz) $
-    , mw:REFORM(TRANSPOSE(REFORM(data[*,*,*,9],nz,ny,nx),[2,1,0]),nx,ny,nz) $
+    , pel:REFORM(TRANSPOSE(REFORM(data[*,*,*,7],nz,ny,nx),[2,1,0]),nx,ny,nz) $
+    , mw:REFORM(TRANSPOSE(REFORM(data[*,*,*,8],nz,ny,nx),[2,1,0]),nx,ny,nz) $
+    , tau:REFORM(TRANSPOSE(REFORM(data[*,*,*,9],nz,ny,nx),[2,1,0]),nx,ny,nz) $
     , x:REFORM(TRANSPOSE(REFORM(data[*,*,*,10],nz,ny,nx),[2,1,0]),nx,ny,nz) $
     , y:REFORM(TRANSPOSE(REFORM(data[*,*,*,11],nz,ny,nx),[2,1,0]),nx,ny,nz) $
     , z:REFORM(TRANSPOSE(REFORM(data[*,*,*,12],nz,ny,nx),[2,1,0]),nx,ny,nz) $

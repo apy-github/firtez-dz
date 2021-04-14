@@ -32,16 +32,16 @@ IF (N_ELEMENTS(vz) NE 0) THEN BEGIN
   IF (dims EQ 0) THEN dims = SIZE(vz, /dim)
   tofill[6] = 0
 ENDIF
-IF (N_ELEMENTS(tau) NE 0) THEN BEGIN
-  IF (dims EQ 0) THEN dims = SIZE(tau, /dim)
-  tofill[7] = 0
-ENDIF
 IF (N_ELEMENTS(pel) NE 0) THEN BEGIN
   IF (dims EQ 0) THEN dims = SIZE(pel, /dim)
-  tofill[8] = 0
+  tofill[7] = 0
 ENDIF
 IF (N_ELEMENTS(mw) NE 0) THEN BEGIN
   IF (dims EQ 0) THEN dims = SIZE(mw, /dim)
+  tofill[8] = 0
+ENDIF
+IF (N_ELEMENTS(tau) NE 0) THEN BEGIN
+  IF (dims EQ 0) THEN dims = SIZE(tau, /dim)
   tofill[9] = 0
 ENDIF
 IF (N_ELEMENTS(x) NE 0) THEN BEGIN
@@ -78,9 +78,9 @@ FOR i=0,N_ELEMENTS(tofill)-1 DO BEGIN
       4: by = fltarr(dims)
       5: bz = fltarr(dims)
       6: vz = fltarr(dims)
-      7: tau = fltarr(dims)
-      8: pel = fltarr(dims)
-      9: mw = fltarr(dims)
+      7: pel = fltarr(dims)
+      8: mw = fltarr(dims)
+      9: tau = fltarr(dims)
       10: x = fltarr(dims)
       11: y = fltarr(dims)
       12: z = fltarr(dims)
@@ -108,9 +108,9 @@ RETURN, {name:'' $
     , by: REFORM(FLOAT(by), nx, ny, nz)$
     , bz: REFORM(FLOAT(bz), nx, ny, nz)$
     , vz: REFORM(FLOAT(vz), nx, ny, nz)$
-    , tau: REFORM(FLOAT(tau), nx, ny, nz)$
     , pel: REFORM(FLOAT(pel), nx, ny, nz)$
     , mw: REFORM(FLOAT(mw), nx, ny, nz)$
+    , tau: REFORM(FLOAT(tau), nx, ny, nz)$
     , x: REFORM(FLOAT(x), nx, ny, nz)$
     , y: REFORM(FLOAT(y), nx, ny, nz)$
     , z: REFORM(FLOAT(z), nx, ny, nz)$
