@@ -583,21 +583,21 @@ ENDIF
     RCOEFS(:,:)=0.D0
     OCOEFS(:,:)=0.D0
     !
-    IF (INJ.LT.INZ) THEN
+    IF (INJ.EQ.1) THEN
+      OCOEFS(:,1) = 1.0d0!DBLE(INJ) / DBLE(INZ)
+    ELSE IF (INJ.LT.INZ) THEN
       !
       CALL GET_POSITIONS(INZ, INJ, RINTERVALS)
       !
-!      print*, shape(RINTERVALS)
-!      print*, shape(OCOEFS)
       DO J=1,INJ
         JI = RINTERVALS(MAX(J-1,1))
         JF = RINTERVALS(MIN(J+1,INJ))
         JM = RINTERVALS(J)
-!        print*, J, JI, JF
+!if (inj.eq.1)        print*, J, JI, JF
         DO I=1,INZ
           IF (I.LT.JI) CYCLE
           IF (I.GT.JF) CYCLE
-!PRINT*, 'I=', I, 'JI=', JI, ' ; JM=', JM, ' ; JF=', JF
+!if (inj.eq.1) PRINT*, 'I=', I, 'JI=', JI, ' ; JM=', JM, ' ; JF=', JF
           IF (I.EQ.JM) THEN
             OCOEFS(I,J) = 1.0d0
 !PRINT*, OCOEFS(I,J)
@@ -609,33 +609,9 @@ ENDIF
 !PRINT*, OCOEFS(I,J)
           ENDIF
         ENDDO
-        !PRINT*, OCOEFS(:,J)
+!if (inj.eq.1)         PRINT*, OCOEFS(:,J)
 !PRINT*, ''
       ENDDO
-!PRINT*, SUM(OCOEFS, DIM=2)
-!!!!      BRINTERVALS(1)=-1.D0
-!!!!      BRINTERVALS(2)=0.D0
-!!!!      BRINTERVALS(3:3+INJ-1)=RINTERVALS(:)
-!!!!      BRINTERVALS(INJ+3)=DBLE(INZ)+1.D0
-!!!!      BRINTERVALS(INJ+4)=DBLE(INZ)+2.D0
-!!!!      !
-!!!!      RCOEFS(:,:)=0.D0
-!!!!      !
-!!!!      DO I=2,INJ+2+1
-!!!!        DO J=1,INZ
-!!!!          IF ((J.GE.BRINTERVALS(I-1)).AND.(J.LE.BRINTERVALS(I+1))) THEN
-!!!!            IF (J.LT.BRINTERVALS(I)) THEN
-!!!!              ! INTEGRATION BELOW
-!!!!              RCOEFS(J,I-1)=(DBLE(J)-BRINTERVALS(I-1)) &
-!!!!                  /(BRINTERVALS(I)-BRINTERVALS(I-1))
-!!!!            ELSE
-!!!!              ! INTEGRATION ABOVE
-!!!!              RCOEFS(J,I-1)=(BRINTERVALS(I+1)-DBLE(J)) &
-!!!!                  /(BRINTERVALS(I+1)-BRINTERVALS(I))
-!!!!            ENDIF
-!!!!          ENDIF
-!!!!        ENDDO
-!!!!      ENDDO
       !
     ELSE IF (INZ.EQ.INJ) THEN
       ! IF NZ
@@ -730,14 +706,14 @@ ENDIF
       !
       CALL GET_INT_COEFS(INZ, INJEVALS, PTR_COEF)
       !
+IF (mpi__myrank.eq.0) PRINT*, IFREEP, INJEVALS
       IFREEP=IFREEP+INJEVALS
       NSLAB_PAR=INJEVALS
       !
       NULLIFY(PTR_COEF)
       !
     ENDIF
-!PRINT*, ' [[ end UPDATE_COEFS ]]'
-!    STOP
+IF (mpi__myrank.eq.0) PRINT*, ' [[ end UPDATE_COEFS ]]', IFREEP
 !    STOP
 !    STOP
 !    STOP
@@ -812,7 +788,6 @@ ENDIF
     FACTOR=1.0D0
     !
     IF (.NOT.VREGULARIZATION) THEN
-PRINT*, ' NEW_SOLVE_PERTURBATION ??'
       PEN_RES(:)=0.0D0
       PEN_HSS(:,:)=0.0D0
     ELSE
@@ -989,12 +964,18 @@ PRINT*, ' NEW_SOLVE_PERTURBATION ??'
     IF (VREGULARIZATION) THEN
       PEN_FACTOR=1.0d0
       !IF (SUM(PEN_RES*PEN_RES).LT.(INV_SLA(2)*1.0D-2)) THEN
-      !  PEN_FACTOR=DSQRT(INV_SLA(2)/SUM(PEN_RES*PEN_RES)*1.0D-1)
+      !  PEN_FACTOR=DSQRT(INV_SLA(2)/SUM(PEN_RES*PEN_RES)*5.0D-1)
       !ENDIF
       !
       IF (MVERBOSE.GT.0) THEN
+        IF (MVERBOSE.LT.3) THEN
             PRINT*, ' Chi: ', INV_SLA(2), ' ; Reg. Chi: ', SUM(PEN_RES*PEN_RES)! &
       !          , ' ; MReg. Chi: ', SUM(PEN_RES*PEN_FACTOR*PEN_FACTOR*PEN_RES)
+        ELSE
+            PRINT*, ' Chi: ', INV_SLA(2), ' ; Reg. Chi: ', SUM(PEN_RES*PEN_RES) &
+                , ' ; MReg. Chi: ', SUM(PEN_RES*PEN_FACTOR*PEN_FACTOR*PEN_RES) &
+                , ' ; P(factor)=', PEN_FACTOR
+        ENDIF
       ENDIF
       !
       INV_SLA(2)=INV_SLA(2)+SUM(PEN_RES*PEN_FACTOR*PEN_FACTOR*PEN_RES)
@@ -1122,21 +1103,21 @@ PRINT*, ' NEW_SOLVE_PERTURBATION ??'
         JD = NSLAB_PER_FREEV(ITVAR)
         JF=JI+JD-1
 
-        !IF (MVERBOSE.GT.0) THEN
-        !  SAMPLED_MOD(JI:JF) = 0
-        !  CALL CONTRACT_VECTOR(JD, MODEL2D_RCV(:,12,1), PTR_COEF, SAMPLED_MOD(JI:JF))
-        !  CNT=0
-        !  print*, ' ***Tau: *** '!, JI, JF, ' ; ', SAMPLED_MOD(JI:JF)
-        !  DO K=JI,JF
-        !    IF (SAMPLED_MOD(K).LT.(-4)) CYCLE
-        !    IF (SAMPLED_MOD(K).GT.0.5) CYCLE
-        !    CNT=CNT+1
-        !    PRINT*, SAMPLED_MOD(K)
-        !  ENDDO
-        !  PRINT*, ' Number of nodes inside ltauE(0.5,-4)=', CNT, ' out of a maximum of ', JF-JI+1 &
-        !      , ' nodes for ', PARAM_LABELS(ITPAR)
-        !  SAMPLED_MOD(JI:JF) = 0
-        !ENDIF
+        IF (MVERBOSE.GT.6) THEN
+          SAMPLED_MOD(JI:JF) = 0
+          CALL CONTRACT_VECTOR(JD, MODEL2D_RCV(:,12,1), PTR_COEF, SAMPLED_MOD(JI:JF))
+          CNT=0
+          print*, ' ***Tau: *** '!, JI, JF, ' ; ', SAMPLED_MOD(JI:JF)
+          DO K=JI,JF
+            IF (SAMPLED_MOD(K).LT.(-4)) CYCLE
+            IF (SAMPLED_MOD(K).GT.0.5) CYCLE
+            CNT=CNT+1
+            PRINT*, SAMPLED_MOD(K)
+          ENDDO
+          PRINT*, ' Number of nodes inside ltauE(0.5,-4)=', CNT, ' out of a maximum of ', JF-JI+1 &
+              , ' nodes for ', PARAM_LABELS(ITPAR)
+          SAMPLED_MOD(JI:JF) = 0
+        ENDIF
 
         CALL CONTRACT_VECTOR(JD, PTR_MODEL, PTR_COEF, SAMPLED_MOD(JI:JF))
         SAMPLED_MOD(JI:JF)=SAMPLED_MOD(JI:JF)/NORM
@@ -1217,6 +1198,8 @@ PRINT*, ' NEW_SOLVE_PERTURBATION ??'
   !
   SUBROUTINE GET_PERT_1D()
     !
+USE ATM_PARAM
+
     REAL(SP), POINTER, DIMENSION(:,:)       :: MODEL2D
     REAL(DP), POINTER, DIMENSION(:)         :: PTR_ITDELTA
     REAL(DP), POINTER, DIMENSION(:)         :: PTR_ATMFACTOR
@@ -1236,7 +1219,6 @@ PRINT*, ' NEW_SOLVE_PERTURBATION ??'
     ! ... response function (if needed), we split the model into ...
     ! ... the various atmospheric physical parameters:
     CALL SPLIT_MODEL(MODEL2D_RCV(:,:,2))
-
 
     !
     ! The equivalent response functions are multiplied by the square root...
@@ -1771,7 +1753,7 @@ PRINT*, ' NEW_SOLVE_PERTURBATION ??'
     !
     DO J=1,NJ
       IF (ABSOLUTE.GT.0) THEN
-        PERTURBATION(J)=MINVAL((/ABSOLUTE,(ABS(MPERT*AVGPAR(J)))/))
+        PERTURBATION(J)=MAXVAL((/ABSOLUTE,(ABS(MPERT*AVGPAR(J)))/))
       ELSE
         PERTURBATION(J)=ABS(MPERT*AVGPAR(J))
       ENDIF
@@ -1986,8 +1968,9 @@ PRINT*, ' NEW_SOLVE_PERTURBATION ??'
         IF (I.EQ.1) THEN
           !TLLIM=-1.5E0
           TLLIM=-4.5E0
-          !TLLIM=-11.5E0
+          TLLIM=-11.5E0
           TULIM=0.5E0
+          !TULIM=7.5E0
           DO K=SIZE(BUMOD),1,-1
             ! Atmosphere above sensitivity area:
             IF (PTR_MODEL2D(K,12).LT.TLLIM) THEN

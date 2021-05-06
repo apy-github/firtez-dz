@@ -230,7 +230,6 @@ MODULE RTESOLVER
             STKIN(:,1)=SYN1D(:,L)
         ENDIF
       ENDIF ! HYDROSTATICDER
-
       DSYN1D(:,1,L,K)=RTE_DT_PG(:,1)
       ! dT at constant RHO
       RTE_DT_RHO=MATMUL(-DEVOLDT_RHO,SFM)+MATMUL(IMAT-EVOL,DSFM)&
@@ -1028,6 +1027,7 @@ MODULE RTESOLVER
     WAVELENGTH=WAVELENGTH*1D-8
     ! We assume black body radiation (LTE) + fixed NLTE departure coefficients  + 
     ! + no polarization for the source function
+!print*, shape(popu)
     SF(:)=0.0D0
     SF(1)=2.0D0*HPLA*LIGHT**2.0D0/(WAVELENGTH**5.0D0)&
         *(1.0D0/((POPL(M,K)/POPU(M,K))*EXP(HPLA*LIGHT/(WAVELENGTH*KBOL*TEM(K)))-1.0D0))

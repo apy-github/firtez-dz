@@ -56,11 +56,19 @@ MODULE INVERSION
   !
   SUBROUTINE INVERT3D()
     !
+!!!!!!!!!!!!!!    USE GET_DMODEL, ONLY: PERT_TEMP
+    !
     INTEGER                   :: I
     LOGICAL                   :: STOP_ITERATION!, CRFS
     INTEGER                   :: CRFS
     INTEGER                   :: IITER
     INTEGER                   :: CNT
+    !
+!!!!!!!!!!!!!!    REAL(SP), DIMENSION(:), ALLOCATABLE :: BUPAR
+!!!!!!!!!!!!!!    REAL(SP), DIMENSION(:), ALLOCATABLE :: BUOBS
+!!!!!!!!!!!!!!    REAL(SP), DIMENSION(:), ALLOCATABLE :: BUDSYN
+!!!!!!!!!!!!!!    REAL(DP) :: PPOS, PNEG
+!!!!!!!!!!!!!!    INTEGER :: IP
     !
     IF (mpi__myrank.EQ.0) PRINT*, 'INVERSION3D:'
     !
@@ -78,10 +86,62 @@ MODULE INVERSION
       DO WHILE (STOP_ITERATION)
         !
         CALL MODELLING(CRFS)
+!!!!!!!!!!!!!!!!!!!!IF (mpi__myrank.eq.0) then
+!!!!!!!!!!!!!!!!!!!!PRINT*, 'Here?'
+!!!!!!!!!!!!!!!!!!!!PRINT*, SHAPE(DSYN)
+!!!!!!!!!!!!!!!!!!!!PRINT*, SUM(ABS(DSYN))
+!!!!!!!!!!!!!!!!!!!!! Take numerical derivatives:
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!      IP=170
+!!!!!!!!!!!!!!!!!!!!      IP=2
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!      PRINT*, SHAPE(TEM3D)
+!!!!!!!!!!!!!!!!!!!!      PRINT*, SUM(TEM3D)
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!      ALLOCATE(BUPAR(NZ))
+!!!!!!!!!!!!!!!!!!!!      ALLOCATE(BUOBS(NFREQ))
+!!!!!!!!!!!!!!!!!!!!      ALLOCATE(BUDSYN(NFREQ))
+!!!!!!!!!!!!!!!!!!!!      BUPAR(:)=TEM3D(:,1,1)
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!PRINT*, 'to pert_temp: ', IFREEP,NZ
+!!!!!!!!!!!!!!!!!!!!      BUDSYN(:) = DSYN(:,IP,1,1)
+!!!!!!!!!!!!!!!!!!!!      PRINT*, 'A:', DSYN(:,IP,1,1)
+!!!!!!!!!!!!!!!!!!!!      PRINT*, 'A:', BUDSYN
+!!!!!!!!!!!!!!!!!!!!      !PPOS = 0.05D0 * TEM3D(IP,1,1)
+!!!!!!!!!!!!!!!!!!!!      !TEM3D(IP,1,1)=TEM3D(IP,1,1) + PPOS
+!!!!!!!!!!!!!!!!!!!!      CALL PERT_TEMP(IFREEP,NZ,TEM3D(:,1,1),0.05D0,IP,PPOS)
+!!!!!!!!!!!!!!!!!!!!endif
+!!!!!!!!!!!!!!!!!!!!      MRESPFUNCT=.FALSE.
+!!!!!!!!!!!!!!!!!!!!      CALL FORWARD3D()
+!!!!!!!!!!!!!!!!!!!!IF (mpi__myrank.eq.0) then
+!!!!!!!!!!!!!!!!!!!!      BUOBS(:) = SYN3D(:,1,1)
+!!!!!!!!!!!!!!!!!!!!      TEM3D(:,1,1) = BUPAR(:)
+!!!!!!!!!!!!!!!!!!!!      !PNEG = - 0.05D0 * TEM3D(IP,1,1)
+!!!!!!!!!!!!!!!!!!!!      !TEM3D(IP,1,1)=TEM3D(IP,1,1) + PNEG
+!!!!!!!!!!!!!!!!!!!!      CALL PERT_TEMP(IFREEP,NZ,TEM3D(:,1,1),-0.05D0,IP,PNEG)
+!!!!!!!!!!!!!!!!!!!!endif
+!!!!!!!!!!!!!!!!!!!!      CALL FORWARD3D()
+!!!!!!!!!!!!!!!!!!!!IF (mpi__myrank.eq.0) then
+!!!!!!!!!!!!!!!!!!!!      PRINT*, PPOS, PNEG
+!!!!!!!!!!!!!!!!!!!!      BUOBS(:) = (BUOBS(:) - SYN3D(:,1,1))
+!!!!!!!!!!!!!!!!!!!!      BUOBS(:) = BUOBS(:) / (PPOS-PNEG)
+!!!!!!!!!!!!!!!!!!!!      PRINT*, 'N:', BUOBS(:)
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!      PRINT*, 'A/N=', BUDSYN(:) / BUOBS(:)
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!DEALLOCATE(BUPAR)
+!!!!!!!!!!!!!!!!!!!!DEALLOCATE(BUOBS)
+!!!!!!!!!!!!!!!!!!!!PRINT*, '???'
+!!!!!!!!!!!!!!!!!!!!endif
+!!!!!!!!!!!!!!!!!!!!STOP
+        !CALL FORWARD3D()
         !
         ! We now calculate the perturbation to be applied...
         ! ...consistent with the previous modelizing:
         CALL SOLVE_DMODEL()
+        ! NEW: CALL GET_DMODEL()
         !
         CALL MAKE_DECISION(STOP_ITERATION)
     CNT = CNT + 1
@@ -256,7 +316,7 @@ MSMOOTHING=.TRUE.
 !MSMOOTHING=.FALSE.
 IF (MSMOOTHING.EQV..TRUE.) THEN
   CALL SMOOTHING_B()
-  CALL FORWARD3D()
+!  CALL FORWARD3D()
 ENDIF
 
     !
@@ -443,6 +503,8 @@ PRINT*, '*** Smoothing ***'
     REAL(DP)                 :: LK_HC, ATN2
     INTEGER                  :: ITZ, WQOFF, WUOFF, WVOFF
     REAL(DP), DIMENSION(1,1)  :: KOL
+    INTEGER :: INITI
+    LOGICAL :: ASSISTED
     !
     IF ((INV_ATMPAR(2).EQV..FALSE.).AND.(INV_ATMPAR(8).EQV..FALSE.)) THEN
 IF (mpi__myrank.EQ.0) PRINT*, 'CHECK TAU'
@@ -454,13 +516,18 @@ IF (mpi__myrank.EQ.0) PRINT*, 'CHECK TAU'
       MINVERSION=.FALSE.
       MRESPFUNCT=.FALSE.
       MGETTAU=.TRUE.
-      IF (I.EQ.1) THEN
+      ASSISTED=.FALSE.
+      INITI=1
+      IF (MPROGRES.EQV..FALSE.) INITI=I
+      !
+      IF (I.EQ.INITI) THEN
       !
       !
       !
       !
       ! Assist B:
         IF (ASSIST_B.EQV..TRUE.) THEN
+          ASSISTED=.TRUE.
 IF (mpi__myrank.EQ.0) PRINT*, '  Assist B:'
           IF (mpi__myrank.EQ.0) THEN
             IF (ALL(INV_STK(2:4)).EQV..TRUE.) THEN
@@ -530,6 +597,7 @@ IF (mpi__myrank.EQ.0) PRINT*, '  Assist B:'
         !
         ! Assist Vlos:
         IF (ASSIST_V.EQV..TRUE.) THEN
+          ASSISTED=.TRUE.
 IF (mpi__myrank.EQ.0) PRINT*, '  Assist Vlos:'
           IF (mpi__myrank.EQ.0) THEN
             CALL ALLOCATE_3D_DP(TAU1TEM, NY, NX, 1, 'A')
@@ -577,6 +645,7 @@ IF (mpi__myrank.EQ.0) PRINT*, '  Assist Vlos:'
         !
         ! Assist Temperature:
         IF (ASSIST_T.EQV..TRUE.) THEN
+          ASSISTED=.TRUE.
 IF (mpi__myrank.EQ.0) PRINT*, '  Assist T:'
           IF (mpi__myrank.EQ.0) THEN
             CALL ALLOCATE_3D_DP(TAU1TEM, NY, NX, 2, 'A')
@@ -609,6 +678,7 @@ IF (mpi__myrank.EQ.0) PRINT*, '  Assist T:'
         !
         ! Assist Gas pressure:
         IF (ASSIST_P.EQV..TRUE.) THEN
+          ASSISTED=.TRUE.
 IF (mpi__myrank.EQ.0) PRINT*, '  Assist P:'
           IF (mpi__myrank.EQ.0) THEN
             PRINT*, 'SET_TAU'
@@ -640,9 +710,12 @@ IF (mpi__myrank.EQ.0) PRINT*, '  Assist P:'
         !
         HYDRO_TOP=BU_HYD
   ! Get profiles
-  !PRINT*, 'Get profiles after assistance:'
+if (assisted) then
+  if (mpi__myrank.eq.0) PRINT*, 'Get profiles after assistance:'
+  if (mpi__myrank.eq.0) PRINT*, '    Avoiding it since I am not sure if necessary'
         MSYNTHESIS=.TRUE.
-        CALL FORWARD3D()
+  !      CALL FORWARD3D()
+endif
       ENDIF
 !
       HYDRO_TOP=BU_HYD
@@ -752,19 +825,20 @@ IF (mpi__myrank.EQ.0) PRINT*, '  Assist P:'
       WRITE(*,*) '<STEPS>=', SUM(INV_MAS(1,:,:))/(1.D0*NX*NY)&
           ,';',MINVAL(INV_MAS(1,:,:)),';', MAXVAL(INV_MAS(1,:,:))
       WRITE(*,*) '<CHI>=', SUM(INV_MAS(3,:,:)*IMASK)/(SUM(IMASK))
-      WRITE(*,*) '<LAMBDA>=', SUM(INV_MAS(9,:,:))/(1.D0*NX*NY)
+      WRITE(*,*) '<LAMBDA>=', SUM(INV_MAS(9,:,:))/(1.D0*NX*NY)&
+          ,';',MINVAL(INV_MAS(9,:,:)),';', MAXVAL(INV_MAS(9,:,:))
       !
       ! Check for bad pixels. If any, replace it by the surrounding atmosphere
       CALL CHECK_CHI2_XY()
       !
       STOP_CRIT=0
-      IF (NX*NY-SUM(AM_I_DONE).EQ.0) THEN
+      IF (NX*NY-SUM(AM_I_DONE).LE.0) THEN
         STOP_CRIT=1
       ENDIF
 
-      IF (SUM(INV_MAS(9,:,:)*(1.-AM_I_DONE))/SUM(1.0D0-AM_I_DONE).GE.1.D4) THEN
-        STOP_CRIT=1
-      ENDIF
+!!!!!!!!      IF (SUM(INV_MAS(9,:,:)*(1.-AM_I_DONE))/SUM(1.0D0-AM_I_DONE).GE.1.D4) THEN
+!!!!!!!!        STOP_CRIT=1
+!!!!!!!!      ENDIF
 !PRINT*, ' >>>>>>>> ', CURIC, MAXITER, MAXSTEPS, MAXSTEPS-(MAXITER-CURIC)
       IF (SUM(INV_MAS(1,:,:))/(1.D0*NX*NY).GE.MAX(1,(MAXSTEPS-(MAXITER-CURIC)))) THEN
       !IF (SUM(INV_MAS(1,:,:))/(1.D0*NX*NY).GE.MAXSTEPS) THEN

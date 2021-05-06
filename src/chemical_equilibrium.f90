@@ -188,10 +188,11 @@ MODULE CHEMICAL_EQUILIBRIUM
     ERROR=0.0D0
     NUME=0.0D0
     NHYD=0.0D0
+    IF (NELEC.NE.NELEC) NELEC=0.0d0
     !
     ! Estimation of electron density
     !
-    IF ((NELEC.LT.1D0).OR.(NELEC.NE.NELEC)) NELEC=PG/(101D0*KBOL*TEMP)
+    IF (NELEC.LT.1D0) NELEC=PG/(101D0*KBOL*TEMP)
     PELEC=NELEC*KBOL*TEMP
     !
     ! If our estimation for NELEC is way above the maximum possible...
@@ -2112,6 +2113,9 @@ MODULE CHEMICAL_EQUILIBRIUM
        ENDDO
        !
        DNELEC_NEW=(DNELEC_EST+DNELEC_OLD)/2D0
+       IF (ABS(DNELEC_NEW).GT.1.0D40) THEN
+         DNELEC_NEW=0.0D0
+       ENDIF
        DERROR=ABS((DNELEC_NEW-DNELEC_OLD)/DNELEC_NEW)
        !
        ITER = ITER + 1

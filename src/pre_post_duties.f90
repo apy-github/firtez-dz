@@ -294,10 +294,10 @@ PRINT*, '*********************************************************************'
       !
       IF (MINVERSION.EQV..TRUE.) THEN
         !
-        PRINT*, 'WRITING MODEL ERRORS:'
-        CALL WRITE_MODEL(TRIM(OUTPPATH)//'eout_'//TRIM(NAMEMODEL), NX, NY, NZ&
-                , ETEM3D, EPG3D, ERHO3D, EBX3D, EBY3D, EBZ3D, EVZ3D&
-                , PEL3D, MW3D, TAU3D5, XX, YY, ZZ, 3000, 3)
+        PRINT*, 'WRITING MODEL ERRORS (skip):'
+        !CALL WRITE_MODEL(TRIM(OUTPPATH)//'eout_'//TRIM(NAMEMODEL), NX, NY, NZ&
+        !        , ETEM3D, EPG3D, ERHO3D, EBX3D, EBY3D, EBZ3D, EVZ3D&
+        !        , PEL3D, MW3D, TAU3D5, XX, YY, ZZ, 3000, 3)
         !
       ENDIF ! Inversion
       !

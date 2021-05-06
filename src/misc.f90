@@ -11,6 +11,11 @@ MODULE MISC
   !
   !::::::::::::::::::::::::::::::::::::::::::::::::
   !
+  INTEGER, PARAMETER :: LI=KIND(10000000)
+  !INTEGER(LI), parameter :: maxrec=327155710
+  INTEGER(LI), parameter :: bmaxrec=1073741784
+  INTEGER(LI), parameter :: nmaxrec=bmaxrec/4
+  !
   PUBLIC :: READ_SP1D
   PUBLIC :: READ_MODEL_3D
   PUBLIC :: READ_MODEL
@@ -281,8 +286,8 @@ MODULE MISC
             LNTOT=LNTOT+NSDIMS
           ELSE
             LNTOT=1
-            IF (TO_BE_READ.GT.536870902) THEN 
-              LNTOT=536870902
+            IF (TO_BE_READ.GT.nmaxrec) THEN 
+              LNTOT=nmaxrec
             ELSE
               LNTOT=TO_BE_READ
             ENDIF
@@ -412,6 +417,7 @@ MODULE MISC
       !
       TO_BE_READ=LNTOT
       LOFFSET=1
+PRINT*, ' -> Reading model: ', nmaxrec
       !
       OPEN(UNIT=1,FILE=TRIM(FNAME),FORM="unformatted",IOSTAT=IERR)
       IF (IERR.NE.0) THEN
@@ -426,8 +432,8 @@ MODULE MISC
             LNTOT=LNTOT+NSDIMS
           ELSE
             LNTOT=1
-            IF (TO_BE_READ.GT.536870902) THEN 
-              LNTOT=536870902
+            IF (TO_BE_READ.GT.nmaxrec) THEN 
+              LNTOT=nmaxrec
             ELSE
               LNTOT=TO_BE_READ
             ENDIF
@@ -684,7 +690,7 @@ MODULE MISC
     NPAR=13
     LNTOT=1
     LNTOT=LNTOT*NX*NY*NZ*NPAR
-    NRECS=INT(CEILING(REAL(LNTOT)/536870902.E0))
+    NRECS=INT(CEILING(REAL(LNTOT)/REAL(nmaxrec)))
     !
     TOWRITE(4)=NRECS+1.E0   ! NREC
     TOWRITE(5)=4.E0
@@ -775,8 +781,8 @@ MODULE MISC
       LOFFSET=1
       DO I=1,NRECS
         LNTOT=1
-        IF (TO_BE_WRITTEN.GT.536870902) THEN 
-          LNTOT=536870902
+        IF (TO_BE_WRITTEN.GT.nmaxrec) THEN 
+          LNTOT=nmaxrec
         ELSE
           LNTOT=TO_BE_WRITTEN
         ENDIF
@@ -826,7 +832,7 @@ MODULE MISC
     NPAR=13
     LNTOT=1
     LNTOT=LNTOT*NX*NY*NZ*NPAR
-    NRECS=INT(CEILING(REAL(LNTOT)/536870902.E0))
+    NRECS=INT(CEILING(REAL(LNTOT)/REAL(nmaxrec)))
     !
     TOWRITE(4)=NRECS+1.E0   ! NREC
     TOWRITE(5)=4.E0
@@ -907,8 +913,8 @@ MODULE MISC
       LOFFSET=1
       DO I=1,NRECS
         LNTOT=1
-        IF (TO_BE_WRITTEN.GT.536870902) THEN 
-          LNTOT=536870902
+        IF (TO_BE_WRITTEN.GT.nmaxrec) THEN 
+          LNTOT=nmaxrec
         ELSE
           LNTOT=TO_BE_WRITTEN
         ENDIF
@@ -1066,7 +1072,7 @@ MODULE MISC
     NPAR=4
     LNTOT=1
     LNTOT=LNTOT*SZ(1)*SZ(2)*SZ(3)*SZ(4)
-    NRECS=INT(CEILING(REAL(LNTOT)/536870902.E0))
+    NRECS=INT(CEILING(REAL(LNTOT)/REAL(nmaxrec)))
     !
     TOWRITE(4)=NRECS+3.E0   ! NREC
     TOWRITE(5)=4           ! NDIMS
@@ -1120,8 +1126,8 @@ MODULE MISC
       LOFFSET=1
       DO I=1,NRECS
         LNTOT=1
-        IF (TO_BE_WRITTEN.GT.536870902) THEN
-          LNTOT=536870902
+        IF (TO_BE_WRITTEN.GT.nmaxrec) THEN
+          LNTOT=nmaxrec
         ELSE
           LNTOT=TO_BE_WRITTEN
         ENDIF
@@ -1173,7 +1179,7 @@ MODULE MISC
     NPAR=4
     LNTOT=1
     LNTOT=LNTOT*SZ(1)*SZ(2)*SZ(3)*SZ(4)
-    NRECS=INT(CEILING(REAL(LNTOT)/536870902.E0))
+    NRECS=INT(CEILING(REAL(LNTOT)/REAL(nmaxrec)))
     !
     TOWRITE(4)=NRECS+3.E0   ! NREC
     TOWRITE(5)=4           ! NDIMS
@@ -1226,8 +1232,8 @@ MODULE MISC
       LOFFSET=1
       DO I=1,NRECS
         LNTOT=1
-        IF (TO_BE_WRITTEN.GT.536870902) THEN
-          LNTOT=536870902
+        IF (TO_BE_WRITTEN.GT.nmaxrec) THEN
+          LNTOT=nmaxrec
         ELSE
           LNTOT=TO_BE_WRITTEN
         ENDIF
@@ -1443,8 +1449,8 @@ MODULE MISC
               LNTOT=NIW
           ELSE
             LNTOT=1
-            IF (TO_BE_READ.GT.536870902) THEN 
-              LNTOT=536870902
+            IF (TO_BE_READ.GT.nmaxrec) THEN 
+              LNTOT=nmaxrec
             ELSE
               LNTOT=TO_BE_READ
             ENDIF
@@ -1551,6 +1557,7 @@ MODULE MISC
       !
       TO_BE_READ=LNTOT
       LOFFSET=1
+PRINT*, " *Reading* ", NIX, NIY, NIW, NIS, RNREC
       !
       OPEN(UNIT=1,FILE=TRIM(FNAME),FORM="unformatted",IOSTAT=IERR)
       IF (IERR.NE.0) THEN
@@ -1569,14 +1576,25 @@ MODULE MISC
               LNTOT=NIW
           ELSE
             LNTOT=1
-            IF (TO_BE_READ.GT.536870902) THEN 
-              LNTOT=536870902
+            IF (TO_BE_READ.GT.nmaxrec) THEN 
+              LNTOT=nmaxrec
             ELSE
               LNTOT=TO_BE_READ
             ENDIF
           ENDIF
+PRINT*, "     -> ", I, LNTOT
           ALLOCATE(TOREAD(LNTOT))
-          READ(1) TOREAD
+PRINT*, "     -> 0)", SIZE(TOREAD)
+          READ(1,IOSTAT=IERR) TOREAD
+          IF (IERR.NE.0) THEN
+            PRINT*, '   ***   '
+            PRINT*, ' Error reading: '//TRIM(FNAME)
+            PRINT*, ' Error code: ', IERR
+            PRINT*, SUM(ABS(TOREAD))
+            PRINT*, '   ___   '
+          ENDIF 
+
+PRINT*, "     -> 0.1)", SIZE(TOREAD)
           ! STORE:
           IF (I.EQ.2) THEN
 !PRINT*, 'I AM GIVING ERROR HERE: ', SHAPE(IND), SHAPE(TMP1D), SHAPE(TOREAD)
@@ -1585,8 +1603,11 @@ MODULE MISC
             WAVE=DBLE(TOREAD)
           ELSE IF (I.GT.3) THEN
 !PRINT*, 'PRE:', SIZE(TMP1D(LOFFSET:LOFFSET+LNTOT-1)), SIZE(TOREAD)
+PRINT*, "     -> a)"
             TMP1D(LOFFSET:LOFFSET+LNTOT-1)=TOREAD
+PRINT*, "     -> b)"
             LOFFSET=LOFFSET+LNTOT
+PRINT*, "     -> c)"
             TO_BE_READ=TO_BE_READ-LNTOT
           ENDIF
           DEALLOCATE(TOREAD)
@@ -1738,7 +1759,7 @@ MODULE MISC
     ! NUMBER OF RECORDS TO BE STORED:
     LNTOT=1
     LNTOT=LNTOT*SZ(1)*SZ(2)*SZ(3)*SZ(4)*SZ(5)*SZ(6)
-    NRECS=INT(CEILING(REAL(LNTOT)/536870902.E0))
+    NRECS=INT(CEILING(REAL(LNTOT)/REAL(nmaxrec)))
     TOWRITE(4)=REAL(1+1+1+1+NRECS)         ! NRECS
     ! SUCH HUGE NUMBER OF RECORDS IS NEEDED BECAUSE EACH RECORD IS LIMITED TO 2GB OF SIZE
     TOWRITE(5)=6.E0          ! NDIMS
@@ -1755,7 +1776,7 @@ MODULE MISC
     CALL ALLOCATE_L1D_SP(TMP1D,LNTOT,'READ_ALLOCATION TMP')
     !
     LOFFSET=1
-    IF (REAL(LNTOT/SZ(2)).LT.536870902.E0) THEN
+    IF (REAL(LNTOT/SZ(2)).LT.REAL(nmaxrec)) THEN
       !PRINT*, '?'
       NTOT=SZ(6)*SZ(5)*SZ(4)*SZ(3)*SZ(1)   ! nx*ny*nz*nw*ns
       !PRINT*, '?', NTOT, SZ
@@ -1767,7 +1788,7 @@ MODULE MISC
         LOFFSET=LOFFSET+NTOT
       ENDDO
       DEALLOCATE(TMP5D)
-    ELSE IF (REAL(LNTOT/SZ(2)/SZ(1)).LT.536870902.E0) THEN
+    ELSE IF (REAL(LNTOT/SZ(2)/SZ(1)).LT.REAL(nmaxrec)) THEN
       !PRINT*, '!'
       NTOT=SZ(6)*SZ(5)*SZ(4)*SZ(3) ! nx*ny*nz*nw
       CALL ALLOCATE_4D_SP(TMP4D,SZ(6),SZ(5),SZ(4),SZ(3),'TMP4D')
@@ -1821,8 +1842,8 @@ MODULE MISC
       LOFFSET=1
       DO I=1,NRECS
         LNTOT=1
-        IF (TO_BE_WRITTEN.GT.536870902) THEN
-          LNTOT=536870902
+        IF (TO_BE_WRITTEN.GT.nmaxrec) THEN
+          LNTOT=nmaxrec
         ELSE
           LNTOT=TO_BE_WRITTEN
         ENDIF
@@ -1887,7 +1908,7 @@ MODULE MISC
     !
     LNTOT=LNTOT*NPARTOSAV*SZ(2)*SZ(3)*SZ(4)*SZ(5)*SZ(6)
     !
-    NRECS=INT(CEILING(REAL(LNTOT)/536870902.E0))
+    NRECS=INT(CEILING(REAL(LNTOT)/REAL(nmaxrec)))
     TOWRITE(4)=REAL(1+1+1+1+1+NRECS)         ! NRECS: HEADER, Z, IND, WAVE, LOGV + DATA
     ! SUCH HUGE NUMBER OF RECORDS IS NEEDED BECAUSE EACH RECORD IS LIMITED TO 2GB OF SIZE
     TOWRITE(5)=6.E0          ! NDIMS
@@ -1962,8 +1983,8 @@ MODULE MISC
       LOFFSET=1
       DO I=1,NRECS
         LNTOT=1
-        IF (TO_BE_WRITTEN.GT.536870902) THEN
-          LNTOT=536870902
+        IF (TO_BE_WRITTEN.GT.nmaxrec) THEN
+          LNTOT=nmaxrec
         ELSE
           LNTOT=TO_BE_WRITTEN
         ENDIF
@@ -2101,7 +2122,7 @@ MODULE MISC
     LNTOT=1
     LNTOT=LNTOT*SZ(1)*SZ(2)*SZ(3)*SZ(4)
     !
-    NRECS=INT(CEILING(REAL(LNTOT)/536870902.E0))
+    NRECS=INT(CEILING(REAL(LNTOT)/REAL(nmaxrec)))
     TOWRITE(4)=REAL(1+1+1+1+NRECS)         ! NRECS: HEADER, Z, IND, WAVE + DATA
     ! SUCH HUGE NUMBER OF RECORDS IS NEEDED BECAUSE EACH RECORD IS LIMITED TO 2GB OF SIZE
     TOWRITE(5)=4.E0          ! NDIMS
@@ -2163,8 +2184,8 @@ MODULE MISC
       LOFFSET=1
       DO I=1,NRECS
         LNTOT=1
-        IF (TO_BE_WRITTEN.GT.536870902) THEN
-          LNTOT=536870902
+        IF (TO_BE_WRITTEN.GT.nmaxrec) THEN
+          LNTOT=nmaxrec
         ELSE
           LNTOT=TO_BE_WRITTEN
         ENDIF
@@ -2296,8 +2317,8 @@ MODULE MISC
             LNTOT=LNTOT+NSDIMS
           ELSE
             LNTOT=1
-            IF (TO_BE_READ.GT.536870902) THEN
-              LNTOT=536870902
+            IF (TO_BE_READ.GT.nmaxrec) THEN
+              LNTOT=nmaxrec
             ELSE
               LNTOT=TO_BE_READ
             ENDIF
@@ -2356,7 +2377,7 @@ MODULE MISC
     TOWRITE(3)=160206.E0
     ! NUMBER OF RECORDS TO BE STORED:
     LNTOT=SZ
-    NRECS=INT(CEILING(REAL(LNTOT)/536870902.E0))
+    NRECS=INT(CEILING(REAL(LNTOT)/REAL(nmaxrec)))
     TOWRITE(4)=REAL(1+NRECS)         ! NRECS
     ! SUCH HUGE NUMBER OF RECORDS IS NEEDED BECAUSE EACH RECORD IS LIMITED TO 2GB OF SIZE
     TOWRITE(5)=REAL(RK)          ! NDIMS
@@ -2382,8 +2403,8 @@ MODULE MISC
       LOFFSET=1
       DO I=1,NRECS
         LNTOT=1
-        IF (TO_BE_WRITTEN.GT.536870902) THEN
-          LNTOT=536870902
+        IF (TO_BE_WRITTEN.GT.nmaxrec) THEN
+          LNTOT=nmaxrec
         ELSE
           LNTOT=TO_BE_WRITTEN
         ENDIF
@@ -2513,8 +2534,8 @@ MODULE MISC
           LNTOT=LNTOT+NSDIMS
         ELSE
           LNTOT=1
-          IF (TO_BE_READ.GT.536870902) THEN
-            LNTOT=536870902
+          IF (TO_BE_READ.GT.nmaxrec) THEN
+            LNTOT=nmaxrec
           ELSE
             LNTOT=TO_BE_READ
           ENDIF
