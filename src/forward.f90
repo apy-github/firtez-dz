@@ -919,9 +919,9 @@ call keep_workers_waiting()
          KC5(K)=KC5(K)/NHYD*(1.0D0/MAMU)/MW(K)
          !
 ! Skip too deep layers, as their opacity is so large that they become the boundary condition:
+         IF ((MSYNTHESIS.EQV..TRUE.).OR.(MINVERSION.EQV..TRUE.)) THEN
 IF (KC5(K).LT.KC5THRESHOLD) THEN
          !
-         IF ((MSYNTHESIS.EQV..TRUE.).OR.(MINVERSION.EQV..TRUE.)) THEN
            ! Clean KLIN & KC
            KLIN(:,:)=0.0D0
            KC(:)=0.0D0

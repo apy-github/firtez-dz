@@ -349,12 +349,12 @@ class stk_profile3D(object):
       #print(nnum_to_write)
     
       # The maximum size of a fortran record is 2Gb
-      nbyts_max_frec = 2. * 1024. * 1024. * 1024.
+      nbyts_max_frec = 1. * 1024. * 1024. * 1024.
       nnum_max_frec = nbyts_max_frec / 4.
     
       # We set the maximum number of fortran rec to actual_max-10:
       nnum_rec = np.int(nnum_max_frec - 10.)
-      nrecs_to_write = np.int(np.ceil(nnum_to_write/nnum_rec))
+      nrecs_to_write = np.int32(np.ceil(nnum_to_write/nnum_rec))
     
       # FIRST, WE WRITE A FIRST RECORD WITH THE MANDATORY DATA:
       towrite = np.zeros(9, dtype=fmt_type)
@@ -425,12 +425,12 @@ class stk_profile3D(object):
       #print(nnum_to_write)
     
       # The maximum size of a fortran record is 2Gb
-      nbyts_max_frec = 2. * 1024. * 1024. * 1024.
+      nbyts_max_frec = 1. * 1024. * 1024. * 1024.
       nnum_max_frec = nbyts_max_frec / 4.
     
       # We set the maximum number of fortran rec to actual_max-10:
       nnum_rec = np.int(nnum_max_frec - 10.)
-      nrecs_to_write = np.int(np.ceil(nnum_to_write/nnum_rec))
+      nrecs_to_write = np.int32(np.ceil(nnum_to_write/nnum_rec))
     
       # FIRST, WE WRITE A FIRST RECORD WITH THE MANDATORY DATA:
       towrite = np.zeros(9, dtype=fmt_type)
@@ -1209,7 +1209,110 @@ class atm_model3D(object):
     self.set_tv_defaults()
 
     return
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __repr__(self):
+    """
+      Special method 'repr':
+    """
 
+    return "\n\tFirtez-dz Model atmosphere class."
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __add__(self, atmcls_to_add):
+    """
+      Special method :
+    """
+
+    #
+    # Check alignment:
+    if ( (self.nx!=atmcls_to_add.nx) | (self.ny!=atmcls_to_add.ny) ):
+      print("")
+      print("\tError!")
+      print("\tModel parameters to add are not aligned!")
+      print("")
+      return np.nan
+
+    out = atm_model3D(self.nx, self.ny, self.nz+stkcls_to_add.nz)
+
+
+    pars = ["tem", "pg", "rho", "bx", "by", "bz", "vz", "tau", "z", "pel", "mw", "x", "y"]
+
+    for itp in pars:
+      if (not itp in out):
+        #
+        # Second 
+        from pdb import set_trace as stop
+        stop()
+      out[itp] = np.concatenate([self[itp],atmcls_to_add[itp]], axis=2)
+        
+
+    return out
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __iadd__(self, atmcls_to_add):
+    """
+      Special method :
+    """
+
+    #
+    # Check alignment:
+    if ( (self.nx!=atmcls_to_add.nx) | (self.ny!=atmcls_to_add.ny) ):
+      print("")
+      print("\tError!")
+      print("\tModel parameters to add are not aligned!")
+      print("")
+      return np.nan
+
+    pars = ["tem", "pg", "rho", "bx", "by", "bz", "vz", "tau", "z", "pel", "mw", "x", "y"]
+
+    for itp in pars:
+      if (not itp in self):
+        #
+        # Second 
+        from pdb import set_trace as stop
+        stop()
+      self[itp] = np.concatenate([self[itp],atmcls_to_add[itp]], axis=2)
+ 
+    self.shape = self.tem.shape
+
+    return self
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __getitem__(self, key):
+    """
+      Special method :
+    """
+    return getattr(self, key)
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __setitem__(self, key, item):
+    """
+      Special method :
+    """
+    setattr(self, key, item)
+
+    return
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
+  def __contains__(self, item):
+    """
+      Special method :
+    """
+
+    if (item in self.__dict__.keys()):
+      return True
+    else:
+      return False
+  #
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #
   def set_tv_defaults(self):
 
     cmaps = {}
@@ -1470,12 +1573,12 @@ class atm_model3D(object):
       #print(nnum_to_write)
     
       # The maximum size of a fortran record is 2Gb
-      nbyts_max_frec = 2. * 1024. * 1024. * 1024.
+      nbyts_max_frec = 1. * 1024. * 1024. * 1024.
       nnum_max_frec = nbyts_max_frec / 4.
     
       # We set the maximum number of fortran rec to actual_max-10:
       nnum_rec = np.int(nnum_max_frec - 10.)
-      nrecs_to_write = np.int(np.ceil(nnum_to_write/nnum_rec))
+      nrecs_to_write = np.int32(np.ceil(nnum_to_write/nnum_rec))
     
       # FIRST, WE WRITE A FIRST RECORD WITH THE MANDATORY DATA:
       towrite = np.zeros(9, dtype=fmt_type)
@@ -2615,12 +2718,12 @@ def write_lsf(fname, data, fmt_type=np.float32):
   nbyts_to_write = nnum_to_write * 4.
   
   # The maximum size of a fortran record is 2Gb
-  nbyts_max_frec = 2. * 1024. * 1024. * 1024.
+  nbyts_max_frec = 1. * 1024. * 1024. * 1024.
   nnum_max_frec = nbyts_max_frec / 4.
   
   # We set the maximum number of fortran rec to actual_max-10:
   nnum_rec = np.int(nnum_max_frec - 10.)
-  nrecs_to_write = np.int(np.ceil(nnum_to_write/nnum_rec))
+  nrecs_to_write = np.int32(np.ceil(nnum_to_write/nnum_rec))
   
   # FIRST, WE WRITE A FIRST RECORD WITH THE MANDATORY DATA:
   towrite = np.zeros(6, dtype=fmt_type)

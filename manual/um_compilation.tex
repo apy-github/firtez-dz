@@ -3,14 +3,14 @@
 \subsection{Pre-requisites:}
 \label{ssec:prereq}
 %
-Before attempting the compilation of {\it firtez-dz}, you need the following libraries:
+Before attempting the compilation of {\bf FIRTEZ-dz}, you need the following libraries:
 %
 \begin{itemize}
   \item {\bf LAPACK:} \\
-  Versions tested: 3.7.0\\
+  Versions tested: 3.7.0, 3.9.0\\
   You can download it from \href{http://www.netlib.org/lapack/}{here}.\\
   \item {\bf MPI:}\\
-  Versions tested: 3.1.0\\
+  Versions tested: 3.1.0 (openMPI), 3.3.2 (MPICH)\\
   You can download it from \href{https://www.open-mpi.org/}{here}.\\
   \item {\bf FFTW3:}\\
   Versions tested: 3.3.8\\
@@ -19,7 +19,7 @@ Before attempting the compilation of {\it firtez-dz}, you need the following lib
 %
 % Compiling:
 \subsection{Compilation:}
-Once this software is compiled you can proceed with the compilation of firtez-dz. In {\it src/} directory there is a {\it makefile} file. At the beginning of the file you should define the following variables according to your case:\\
+Once this software is compiled you can proceed with the compilation of {\bf FIRTEZ-dz}. In {\it src/} directory there is a {\it makefile} file. At the beginning of the file you should define the following variables according to your case:\\
 \begin{itemize}
 %  \item {\it FC}:\\
 %  gcc compiler: {\it FC=mpif90}\\
@@ -39,20 +39,34 @@ Once this software is compiled you can proceed with the compilation of firtez-dz
 %
 Once done, save the {\it makefile} and you are almost ready to compile the code.\\
 
-However, it is IMPORTANT to notice that the file {\it splines.f90} does only provide the name of the four subroutines and the input and output variables of each one. The body of each subroutine ({\it SPLIE2}, {\it SPLIN2}, {\it SPLINE}, and {\it SPLINT}) inside the {\it splines.f90} file must be filled using Numerical Recipes (it might be interesting, depending on the size of model atmospheres you are planning to use to increase the {\it NN} parameter of {\it SPLIE2} and {\it SPLIN2} to larger values, for instance 1000).\\
+However, it is {\bf IMPORTANT} to notice that the file {\it splines.f90} does only provide the name of the four subroutines and the input and output variables of each one. The body of each subroutine ({\it SPLIE2}, {\it SPLIN2}, {\it SPLINE}, and {\it SPLINT}) inside the {\it splines.f90} file must be filled using Numerical Recipes (it might be interesting, depending on the size of model atmospheres you are planning to use to increase the {\it NN} parameter of {\it SPLIE2} and {\it SPLIN2} to larger values, for instance 1000).\\
 
 Once these four subroutines are written and in the same {\it src} directory, you can proceed typing:\\
-{\it make clean}\\
-This would remove all the *.mod, *.o, and *.x files and then:\\
-{\it make firtez-dz}\\
-After the latter, the code should compile successfully creating an executable file called: {\it firtez-dz.x}. By default, {\it gnu} fortran compiler is assumed, yet if you want to use intel's, then you compile the code typing:\\
-{\it make firtez COMP=intel}\\
+
+\$ make clean\\
+
+This will remove all the {\it *.mod}, {\it *.o}, and {\it *.x} files and then:\\
+
+\$ make FIRTEZ-dz\\
+
+or:
+
+\$ make\\
+
+With this the code should compile successfully, creating an executable file called: {\it FIRTEZ-dz.x}. By default, {\it gnu} fortran compiler is assumed, yet if you want to use intel's, then you compile the code typing:\\
+
+\$ make FIRTEZ-dz COMP=intel\\
+
+or
+
+\$ make COMP=intel\\
 
 %
 %
 \subsection{Tests:}
-The standard distribution includes some tests to check the correct compilation of {\it firtez-dz}, and also, they are used in the python notebook ({\it firtez\_dz\_usage\_example.ipynb}) included in the {\it python} directory. Also, inside the directory of each test, it is possible to find the {\it control\_file.dat} that can help when looking through the {\it input file} in the next section (see Sect. \ref{sect:execution}). In order to run all the tests, move to the {\it tests} directory and execute the shell script {\it run\_tests.sh} by typing:\\
 
-./run\_tests.sh
+The standard distribution includes some tests to check the correct compilation of {\bf FIRTEZ-dz}, and also, they are used in the python notebook ({\it firtez\_dz\_usage\_example.ipynb}) included in the {\it python} directory. Also, inside the directory of each test, it is possible to find the {\it control\_file.dat} that can help when looking through the {\it input file} in the next section (see Sect. \ref{sect:execution}). In order to run all the tests, move to the {\it tests} directory and execute the shell script {\it run\_tests.sh} by typing:\\
+
+\$ ./run\_tests.sh
 
 %

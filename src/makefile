@@ -8,12 +8,6 @@
 # To be edited by the USER:
 #
 LIBS = \
-        -L /Users/apy/libraries/lib -llapack -lblas \
-        -L /usr/include/ -lfftw3
-LIBS = \
-	-L /home/adpa7375/libraries/src_scratch/lapack-3.9.0 -llapack -lblas \
-        -L /usr/include/ -lfftw3
-LIBS = \
 	-L /home/adpa7375/libraries/src/lapack-3.9.0 -llapack -lblas \
         -L /usr/include/ -lfftw3
 
@@ -25,6 +19,8 @@ LDFLAGS =
 #===========================================
 # From here on, you should not need to edit anything...
 #
+.PHONY: clean FIRTEZ-dz
+.DEFAULT_GOAL := FIRTEZ-dz
 #
 # Common to both compilers
 # 
@@ -276,8 +272,8 @@ invert3d.o: invert3d.f90 phys_param.o \
 main.o: main.f90 user_mpi.o invert3d.o
 	$(FC) $(F90F) $(FOPT) main.f90
 
-firtez-dz: $(OBJ)
-	$(FC) $(OBJ) $(LDFLAGS) $(LIBS) -o firtez-dz.x -fopenmp
+FIRTEZ-dz: $(OBJ)
+	$(FC) $(OBJ) $(LDFLAGS) $(LIBS) -o FIRTEZ-dz.x -fopenmp
 
 clean:
 	rm -f *.o *.a *.x *~ *.mod

@@ -1,8 +1,29 @@
 %
 \label{sect:execution}
 %
-% General outline:
-The code is able to perform different task for which, there are two mandatory files in addition to the executable itself: the input file and the spectral line database file.
+%%%% TMP:% General outline:
+%%%% TMP:The execution of the FIRTEZ-dz code is performed as:\\
+%%%% TMP:
+%%%% TMP:\$ {\it mpirun -n \# ./firtez-dz.x control\_file.dat}\\
+%%%% TMP:
+%%%% TMP:Where {\it \#} must be substituted for whatever number of threads you want to run. Currently, FIRTEZ-dz has been tested in clusters with up to 1000 nodes without issues.\\
+%%%% TMP:
+%%%% TMP:For remote jobs with long execution times we recommend to run FIRTEZ-dz as:\\
+%%%% TMP:
+%%%% TMP:\$ {\it nohup mpirun -n \# ./firtez-dz.x control\_file.dat \&}\\
+%%%% TMP:
+%%%% TMP:This way the job will not stop should your internet connection drop.\\
+%%%% TMP:
+%%%% TMP:While FIRTEZ-dz is running, it also produces a lot of standard output on the console. Some of this output includes error messages and how to solve them. Therefore we do not recommend to run in silent mode ( {\it $>>$ /dev/null}). Then again, for remote jobs this might be your only option if the connection is intermitted. In this case, if you still want to run have a log file (i.e. {\it output.log}) to see what could have gone wrong, we recommend to run the job as:\\
+%%%% TMP:
+%%%% TMP:\$ {\it nohup mpirun -n \# ./firtez-dz.x control\_file.dat | tee output.log \&}\\
+%%%% TMP:
+%%%% TMP:When executing the FIRTE-DZ code, besides the executable itself ({\it firtez-dz.x}), we will need access to two additional files: the input/control file and the spectral line database file. The input/control file is commonly named {\it control\_file.dat} but you can choose to rename it as long as you provide the new name in the execution line above. The spectral line database file must always be named as {\it lines\_database.dat} as this is hardcoded inside FIRTEZ-dz. However, you can modify this file (see below) to add/remove spectral lines.
+%%%% TMP:
+%%%% TMP:
+%%%% TMP:
+
+{\it The code is able to perform different task for which, there are two mandatory files in addition to the executable itself: the input file and the spectral line database file.}
 %
 % Input file:
 \subsection{Input file:}
@@ -128,8 +149,8 @@ The following list covers ALL the fields the code works with, anything outside i
   \end{equation}
   \item {\it INVERSION SETUP:} {\bf Mandatory in {\it INVERSION} mode, otherwise Inactive}\\
   This field is mandatory for {\it INVERSION} mode. It can take any or almost all of the combinations between: {\it TEM}, {\it P0}, {\it PGAS}, {\it RHO}, {\it BX}, {\it BY}, {\it BZ}, and/or {\it VLOS}. It is NOT possible to set {\it TEM}, {\it PGAS}, and {\it RHO} at the same time since it might lead to combination of thermodynamical parameters that do not fulfil the equation of state. It is also not possible to invert at the same time {\it P0} with {\it PGAS} or {\it RHO}, since the former requires of assuming hydrostatic equilibrium. If {\it P0} is active with {\it PGAS}, {\it RHO}, or both, execution will stop. If {\it P0} is active and {\it HYDROSTATIC} is {\it NO} the code will stop execution. For the inversion, by default, the code will assume that one wants to invert all the available slabs. It is possible to limit the number of perturbations to be calculated by physical parameter by adding an accompanying number to each physical parameter.\\
-  {\it POW} 2\\
-  {\it MAXITER} 2\\
+%  {\it POW} 2\\
+%  {\it MAXITER} 2\\
   For example, let say we want to invert the temperature, the three magnetic field components and line-of-sight velocity for a given profile. But, we want to let all the temperatures slabs as free parameters, only perturb each of the three magnetic field components at two points and the line-of-sight velocity at five points, then we should supply the following {\it INVERSION SETUP} field: \\
 \begin{ifbox}[label={tb:inversion_setup}]{{\it Inversion setup}}
   \scriptsize
