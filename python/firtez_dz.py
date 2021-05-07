@@ -16,6 +16,7 @@ from matplotlib import ticker
 pl.ion()
 #
 pl.rcParams.update({'font.size':15})
+#pl.rcParams.update({'text.usetex':False})
 pl.rcParams.update({'text.usetex':True})
 pl.rcParams['xtick.minor.visible'] = True
 pl.rcParams['ytick.minor.visible'] = True
@@ -178,6 +179,7 @@ class stk_profile3D(object):
       self[itp] = np.concatenate([self[itp],stkcls_to_add[itp]], axis=0)
  
     self.shape = self.stki.shape
+    self.nw = self.shape[0] * 1
 
     return self
   #
@@ -1390,8 +1392,8 @@ class atm_model3D(object):
     label['pel']=r'P$_{el}$ [dyn?/cm$^2$]'
     label['mw']=r'$\mu$'
     label['tau']=r'$\lg\tau_{5}$'
-    label['x']=r'z [Mm]'
-    label['y']=r'z [Mm]'
+    label['x']=r'x [Mm]'
+    label['y']=r'y [Mm]'
     label['z']=r'z [Mm]'
     self.tv_defaults['label']=label
 
@@ -2095,12 +2097,12 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
   if (not ('figsize' in fkwargs)):
     autofigsize=1
     xs, ys = pl.rcParams['figure.figsize']
-    nxs = ncols / 1.*np.max([8.,xs])
-    nys = np.max([4.,ys]) * nrows
+    nxs = ncols / 1.*np.min([8.,xs])
+    nys = np.min([4.,ys]) * nrows
     pl.rcParams.update({'figure.figsize':(nxs,nys)})
   #
   pl.close(fnum)
-  fg,ax=pl.subplots(ncols=ncols,nrows=nrows,num=fnum, squeeze=False, **fkwargs)
+  fg,ax=pl.subplots(ncols=ncols,nrows=nrows,num=fnum, clear=True, squeeze=False, **fkwargs)
   fax = ax.flatten()
   lrangex=1.e99
   urangex=-1.e99
