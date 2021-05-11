@@ -179,11 +179,7 @@ class stk_profile3D(object):
       self[itp] = np.concatenate([self[itp],stkcls_to_add[itp]], axis=0)
  
     self.shape = self.stki.shape
-<<<<<<< HEAD
-    self.nw = self.shape[0]
-=======
     self.nw = self.shape[0] * 1
->>>>>>> 28b79566e73c4cb38d778a82ca18b425294668f1
 
     return self
   #
