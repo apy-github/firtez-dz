@@ -179,7 +179,11 @@ class stk_profile3D(object):
       self[itp] = np.concatenate([self[itp],stkcls_to_add[itp]], axis=0)
  
     self.shape = self.stki.shape
+<<<<<<< HEAD
+    self.nw = self.shape[0]
+=======
     self.nw = self.shape[0] * 1
+>>>>>>> 28b79566e73c4cb38d778a82ca18b425294668f1
 
     return self
   #
@@ -856,19 +860,17 @@ def plot_profiles(profiles, pars=['all'] \
     , pargs=(), pkargs={}, fkwargs={}):
 
   if (type(itx)!=list):
-    itx=list(itx)
+    itx=[itx,]
   if (type(ity)!=list):
-    ity=list(ity)
+    ity=[ity,]
   if (type(profiles)!=list):
-    profiles=list(profiles)
+    profiles=[profiles,]
   if (type(labels)!=list):
-    labels=list(labels)
+    labels=[labels,]
   if (type(pars)!=list):
-    pars=list(pars)
-#  if (type(linestyle)!=list):
-#    linestyle=list(linestyle)
+    pars=[pars,]
   if (type(pkwargs) != list):
-    pkwargs=[pkwargs]
+    pkwargs=[pkwargs,]
 
   if ( (len(rangex)!=0) & (len(rangex)!=2) ):
     print('rangex must be a list of two elements or not supplied')
@@ -896,6 +898,8 @@ def plot_profiles(profiles, pars=['all'] \
 
   if (len(pkwargs)==1):
     pkwargs = pkwargs * len(profiles)
+  #if (len(skwargs)==1):
+  #  skwargs = skwargs * len(profiles)
 
   #
   # Plot itself:
@@ -913,10 +917,9 @@ def plot_profiles(profiles, pars=['all'] \
     ncols=sqrtabove
     nrows=np.int16(np.ceil(len(pars)/np.float(ncols)))
 
-  pl.figure(fnum)
-  pl.clf()
+  pl.close(fnum)
   fg,ax=pl.subplots(ncols=ncols,nrows=nrows,num=fnum,sharex=True\
-      ,squeeze=False, **fkwargs)
+      ,squeeze=False, clear=True, **fkwargs)
   fax = ax.flatten()
   lrangex=1.e99
   urangex=-1.e99
@@ -946,10 +949,11 @@ def plot_profiles(profiles, pars=['all'] \
         if (show_labels):
           fax[cnt].plot(xtoplot \
               , itdata[:,itx[it_nnn],ity[it_nnn]], label=labels[itn] \
-              , **pkwargs[pltcnt])
+              , **pkwargs[itn])
         else:
           fax[cnt].plot(xtoplot \
-              , itdata[:,itx[it_nnn],ity[it_nnn]], **pkwargs[pltcnt])
+              , itdata[:,itx[it_nnn],ity[it_nnn]], **pkwargs[itn] \
+              )
         del(itdata)
 
   nylabel_dict = {}
@@ -2043,17 +2047,17 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
   #
 
   if (type(itx)!=list):
-    itx=list(itx)
+    itx=[itx,]
   if (type(ity)!=list):
-    ity=list(ity)
+    ity=[ity,]
   if (type(models)!=list):
-    models=list(models)
+    models=[models,]
   if (type(pars)!=list):
-    pars=list(pars)
+    pars=[pars,]
   if (type(labels)!=list):
-    labels=list(labels)
+    labels=[labels,]
   if (type(skwargs) != list):
-    skwargs=[skwargs]
+    skwargs=[skwargs,]
 
   if (pars[0]=='all'):
     pars = ['tem', 'pg', 'rho', 'bx', 'by', 'bz', 'vz' \
