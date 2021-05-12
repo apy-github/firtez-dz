@@ -63,7 +63,7 @@ MODULE HYDROSTATIC_TOOLS
     REAL(DP)                :: INHYD,IPATOM,IPELEC,IDENS,IMOLECW
 
     ! Calculate the gas density provided the equation of state:
-    CALL GET_RHO(TEM,PI &
+    CALL GET_RHO(TEM,DEXP(PI) &
         ,INHYD,NEL,IPATOM,IPELEC,IDENS,IMOLECW)
     !
     DPDZ=-IMOLECW*MH*GI/(RCTE*TEM)
