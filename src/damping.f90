@@ -10,7 +10,6 @@ MODULE DAMPING
   USE CONS_PARAM, ONLY: SP, DP, EVOLT, HPLA, LIGHT &
       , KBOL, DPI, MAMU, RBOHR
   USE ATOM_DATABASE, ONLY: XI, XII, MATOM, ABUND, REFRAX
-  USE SPLINES, ONLY: SPLIE2, SPLIN2
   USE DERIVVAR
   USE CODE_MODES, ONLY: MRESPFUNCT
   !
@@ -466,7 +465,8 @@ ENDIF
     !
     REAL(DP)     :: CS(21,18), AL(21,18), CS2(21,18), AL2(21,18)
     REAL(DP)     :: NSSG(21), NSPG(18), NSS, NSP
-    INTEGER      :: I, J
+    REAL(DP)     :: A1, A2, A3, A4, S1, S2, S3, S4, AT
+    INTEGER      :: I, J, IX, IY
     !
     IF (OTRANSITION(1) .EQ. 0) NSS=NLOW_EFF
     IF (OTRANSITION(1) .EQ. 1) NSP=NLOW_EFF
@@ -489,17 +489,37 @@ ENDIF
        !
        DO I=1,21
           DO J=1,18
+             ! SIGMA-table
              CS(I,J)=CS_SP(J,I)
+             ! ALPHA-table
              AL(I,J)=AL_SP(J,I)
           ENDDO
        ENDDO
-       ! second derivative table for spline
-       CALL SPLIE2(NSPG,CS,21,18,CS2)
-       CALL SPLIE2(NSPG,AL,21,18,AL2)
-       ! run bicubic spline interpolation
-       CALL SPLIN2(NSSG,NSPG,CS,CS2,21,18,NSS,NSP,SIGMA)
-       CALL SPLIN2(NSSG,NSPG,AL,AL2,21,18,NSS,NSP,ALPHA)
        !
+       IX=MINLOC(ABS(NSS-NSSG),dim=1)
+       IY=MINLOC(ABS(NSP-NSPG),dim=1)
+       !
+       IF (NSS < NSSG(IX)) IX=IX-1
+       IF (NSP < NSSG(IY)) IY=IY-1
+       ! Bilinear interpolation: SIGMA
+       S1=CS(IX,IY)
+       S2=CS(IX+1,IY)
+       S3=CS(IX+1,IY+1)
+       S4=CS(IX,IY+1)
+       A1=ABS((NSSG(IX+1)-NSS)*(NSPG(IY+1)-NSP))
+       A2=ABS((NSSG(IX)-NSS)*(NSPG(IY+1)-NSP))
+       A3=ABS((NSSG(IX)-NSS)*(NSPG(IY)-NSP))
+       A4=ABS((NSSG(IX+1)-NSS)*(NSPG(IY)-NSP))
+       AT=A1+A2+A3+A4
+       SIGMA=(S1*A1+S2*A2+S3*A3+S4*A4)/AT
+       ! Bilinear interpolation: ALPHA
+       S1=AL(IX,IY)
+       S2=AL(IX+1,IY)
+       S3=AL(IX+1,IY+1)
+       S4=AL(IX,IY+1)
+       ALPHA=(S1*A1+S2*A2+S3*A3+S4*A4)/AT
+       !PRINT*,'Bilinear SIGMA=',SIGMA
+       !PRINT*,'Bilinear ALPHA=',ALPHA
     ENDIF
     !
   END SUBROUTINE TRANSITION_SP
@@ -515,7 +535,8 @@ ENDIF
     !
     REAL(DP)     :: CS(18,18), AL(18,18), CS2(18,18), AL2(18,18)
     REAL(DP)     :: NSDG(18), NSPG(18), NSD, NSP
-    INTEGER      :: I, J
+    REAL(DP)     :: A1, A2, A3, A4, S1, S2, S3, S4, AT
+    INTEGER      :: I, J, IX, IY
     !
     IF (OTRANSITION(1) .EQ. 1) NSP=NLOW_EFF
     IF (OTRANSITION(1) .EQ. 2) NSD=NLOW_EFF
@@ -536,13 +557,30 @@ ENDIF
              AL(I,J)=AL_PD(J,I)
           ENDDO
        ENDDO
-       ! setup second derivative table for spline
-       CALL SPLIE2(NSDG,CS,18,18,CS2)
-       CALL SPLIE2(NSDG,AL,18,18,AL2)
-       ! run bicubic spline interpolation
-       CALL SPLIN2(NSPG,NSDG,CS,CS2,18,18,NSP,NSD,SIGMA)
-       CALL SPLIN2(NSPG,NSDG,AL,AL2,18,18,NSP,NSD,ALPHA)
+       IX=MINLOC(ABS(NSP-NSPG), dim=1)
+       IY=MINLOC(ABS(NSD-NSDG), dim=1)
        !
+       IF (NSP < NSPG(IX)) IX=IX-1
+       IF (NSD < NSDG(IY)) IY=IY-1
+       ! Bilinear interpolation: SIGMA
+       S1=CS(IX,IY)
+       S2=CS(IX+1,IY)
+       S3=CS(IX+1,IY+1)
+       S4=CS(IX,IY+1)
+       A1=ABS((NSPG(IX+1)-NSP)*(NSDG(IY+1)-NSD))
+       A2=ABS((NSPG(IX)-NSP)*(NSDG(IY+1)-NSD))
+       A3=ABS((NSPG(IX)-NSP)*(NSDG(IY)-NSD))
+       A4=ABS((NSPG(IX+1)-NSP)*(NSDG(IY)-NSD))
+       AT=A1+A2+A3+A4
+       SIGMA=(S1*A1+S2*A2+S3*A3+S4*A4)/AT
+       ! Bilinear interpolation: ALPHA
+       S1=AL(IX,IY)
+       S2=AL(IX+1,IY)
+       S3=AL(IX+1,IY+1)
+       S4=AL(IX,IY+1)
+       ALPHA=(S1*A1+S2*A2+S3*A3+S4*A4)/AT
+       !PRINT*,'Bilinear SIGMA=',SIGMA
+       !PRINT*,'Bilinear ALPHA=',ALPHA   
     ENDIF
     !
   END SUBROUTINE TRANSITION_PD
@@ -558,7 +596,8 @@ ENDIF
     !
     REAL(DP)     :: CS(18,18), AL(18,18), CS2(18,18), AL2(18,18)
     REAL(DP)     :: NSDG(18), NSFG(18), NSD, NSF
-    INTEGER      :: I,J
+    REAL(DP)     :: A1, A2, A3, A4, S1, S2, S3, S4, AT
+    INTEGER      :: I, J, IX, IY
     !
     IF (OTRANSITION(1) .EQ. 2) NSD=NLOW_EFF
     IF (OTRANSITION(1) .EQ. 3) NSF=NLOW_EFF
@@ -582,13 +621,30 @@ ENDIF
              AL(I,J)=AL_DF(J,I)
           ENDDO
        ENDDO
-       ! setup second derivative table for spline
-       CALL SPLIE2(NSFG,CS,18,18,CS2)
-       CALL SPLIE2(NSFG,AL,18,18,AL2)
-       ! run bicubic spline interpolation
-       CALL SPLIN2(NSDG,NSFG,CS,CS2,18,18,NSD,NSF,SIGMA)
-       CALL SPLIN2(NSDG,NSFG,AL,AL2,18,18,NSD,NSF,ALPHA)
+       IX=MINLOC(ABS(NSD-NSDG), dim=1)
+       IY=MINLOC(ABS(NSF-NSFG), dim=1)
        !
+       IF (NSD < NSDG(IX)) IX=IX-1
+       IF (NSF < NSFG(IY)) IY=IY-1
+       ! Bilinear interpolation: SIGMA
+       S1=CS(IX,IY)
+       S2=CS(IX+1,IY)
+       S3=CS(IX+1,IY+1)
+       S4=CS(IX,IY+1)
+       A1=ABS((NSDG(IX+1)-NSD)*(NSFG(IY+1)-NSF))
+       A2=ABS((NSDG(IX)-NSD)*(NSFG(IY+1)-NSF))
+       A3=ABS((NSDG(IX)-NSD)*(NSFG(IY)-NSF))
+       A4=ABS((NSDG(IX+1)-NSD)*(NSFG(IY)-NSF))
+       AT=A1+A2+A3+A4
+       SIGMA=(S1*A1+S2*A2+S3*A3+S4*A4)/AT
+       ! Bilinear interpolation: ALPHA
+       S1=AL(IX,IY)
+       S2=AL(IX+1,IY)
+       S3=AL(IX+1,IY+1)
+       S4=AL(IX,IY+1)
+       ALPHA=(S1*A1+S2*A2+S3*A3+S4*A4)/AT
+       !PRINT*,'Bilinear SIGMA=',SIGMA
+       !PRINT*,'Bilinear ALPHA=',ALPHA
     ENDIF
     !
   END SUBROUTINE TRANSITION_DF
