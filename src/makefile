@@ -48,8 +48,7 @@ else
   #CC = mpicc
 #
   FPP = -cpp
-  # Debugging:
- FOPT = -fopenmp -fbacktrace -Wall -fcheck=all -g -finit-real=nan -finit-integer=0 -O0
+  # Debugging: FOPT = -fopenmp -fbacktrace -Wall -fcheck=all -g -finit-real=nan -finit-integer=0 -O0
 #
   FR8 = -fdefault-real-8
 #
