@@ -713,7 +713,7 @@ IF (mpi__myrank.eq.0) PRINT*, IFREEP, INJEVALS
       NULLIFY(PTR_COEF)
       !
     ENDIF
-IF (mpi__myrank.eq.0) PRINT*, ' [[ end UPDATE_COEFS ]]', IFREEP
+!IF (mpi__myrank.eq.0) PRINT*, ' [[ end UPDATE_COEFS ]]', IFREEP
 !    STOP
 !    STOP
 !    STOP

@@ -263,7 +263,7 @@ MODULE INVERSION
       CALL ALLOCATE_4D_SP(BEST_DSYN, NFREQ, IFREEP, NY, NX &
           , 'ALLOCATE BEST_DSYN(I)')
       !
-      PRINT*, 'NDSVD: ', NSTKINV*NUMW, ' ; MFIT: ', IFREEP
+      !PRINT*, 'NDSVD: ', NSTKINV*NUMW, ' ; MFIT: ', IFREEP
     ELSE ! Master. Slaves:
       CALL ALLOCATE_2D_SP(EQVDSYN, NFREQ, IFREEP, 'ALLOCATE EQVDSYN(I)')
       CALL ALLOCATE_2D_DP(JACOB,NFREQ,IFREEP,'JACOB IN GET_DMODEL')
@@ -425,7 +425,7 @@ ENDIF
       !IF ((CURIC.EQ.1).AND.(MOD(N_FWD_MODELLING+1,3).EQ.0)) THEN
       IF (MOD(N_FWD_MODELLING+1,3).EQ.0) THEN
       !IF (CURIC.EQ.1) THEN
-PRINT*, '*** Smoothing ***'
+!PRINT*, '*** Smoothing ***'
         !
         DO J=1,8
           !
@@ -507,7 +507,7 @@ PRINT*, '*** Smoothing ***'
     LOGICAL :: ASSISTED
     !
     IF ((INV_ATMPAR(2).EQV..FALSE.).AND.(INV_ATMPAR(8).EQV..FALSE.)) THEN
-IF (mpi__myrank.EQ.0) PRINT*, 'CHECK TAU'
+IF ( (mpi__myrank.EQ.0) .AND. (I.eq.INITI) ) PRINT*, 'CHECK TAU'
       BU_SYN=MSYNTHESIS
       BU_INV=MINVERSION
       BU_HYD=HYDRO_TOP

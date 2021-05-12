@@ -274,7 +274,7 @@ PRINT*, 'Esig: ', ESIG
     !
     !
     IF (mpi__myrank.EQ.0) THEN
-PRINT*, '*** Smoothing ***'
+!PRINT*, '*** Smoothing ***'
       !
       DO J=1,8
         !
@@ -414,7 +414,7 @@ PRINT*, '*** Smoothing ***'
     !
     !
     IF (mpi__myrank.EQ.0) THEN
-PRINT*, '*** Smoothing ***'
+!PRINT*, '*** Smoothing ***'
       !
       DO J=1,8
         !

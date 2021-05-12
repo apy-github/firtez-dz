@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #
+execfile=FIRTEZ-dz.x
 echo "Test RF:"
 #
 if [ ! -d out_dir ]
@@ -8,7 +9,7 @@ then
 fi
 #
 echo "\tlink executable:"
-ln -vfs ../../src/firtez-dz.x .
+ln -vfs ../../src/${execfile} .
 echo "\trun firtez-dz:"
-mpirun -n 2 ./firtez-dz.x control_file.dat
+mpirun -n 2 ./${execfile} control_file.dat
 #

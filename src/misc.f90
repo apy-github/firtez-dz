@@ -417,7 +417,7 @@ MODULE MISC
       !
       TO_BE_READ=LNTOT
       LOFFSET=1
-PRINT*, ' -> Reading model: ', nmaxrec
+!PRINT*, ' -> Reading model: ', nmaxrec
       !
       OPEN(UNIT=1,FILE=TRIM(FNAME),FORM="unformatted",IOSTAT=IERR)
       IF (IERR.NE.0) THEN
@@ -1325,7 +1325,7 @@ PRINT*, ' -> Reading model: ', nmaxrec
       WRITE(*,*) 'VERSION ', (POSV - NEGV) / 2
     ENDIF
     !
-    WRITE(*,*) 'LRWNGFA'
+    !WRITE(*,*) 'LRWNGFA'
     IF (MEDV.EQ.3000) THEN
       WRITE(*,*) 'I AM HERE!'
       CALL READ_PROFILE_3D(FNAME,SHAPE(STOKES),DIND,DWAVE,STOKES,(POSV - NEGV) / 2)
@@ -1557,7 +1557,7 @@ PRINT*, ' -> Reading model: ', nmaxrec
       !
       TO_BE_READ=LNTOT
       LOFFSET=1
-PRINT*, " *Reading* ", NIX, NIY, NIW, NIS, RNREC
+!PRINT*, " *Reading* ", NIX, NIY, NIW, NIS, RNREC
       !
       OPEN(UNIT=1,FILE=TRIM(FNAME),FORM="unformatted",IOSTAT=IERR)
       IF (IERR.NE.0) THEN
@@ -1582,9 +1582,9 @@ PRINT*, " *Reading* ", NIX, NIY, NIW, NIS, RNREC
               LNTOT=TO_BE_READ
             ENDIF
           ENDIF
-PRINT*, "     -> ", I, LNTOT
+!PRINT*, "     -> ", I, LNTOT
           ALLOCATE(TOREAD(LNTOT))
-PRINT*, "     -> 0)", SIZE(TOREAD)
+!PRINT*, "     -> 0)", SIZE(TOREAD)
           READ(1,IOSTAT=IERR) TOREAD
           IF (IERR.NE.0) THEN
             PRINT*, '   ***   '
@@ -1594,7 +1594,7 @@ PRINT*, "     -> 0)", SIZE(TOREAD)
             PRINT*, '   ___   '
           ENDIF 
 
-PRINT*, "     -> 0.1)", SIZE(TOREAD)
+!PRINT*, "     -> 0.1)", SIZE(TOREAD)
           ! STORE:
           IF (I.EQ.2) THEN
 !PRINT*, 'I AM GIVING ERROR HERE: ', SHAPE(IND), SHAPE(TMP1D), SHAPE(TOREAD)
@@ -1603,11 +1603,11 @@ PRINT*, "     -> 0.1)", SIZE(TOREAD)
             WAVE=DBLE(TOREAD)
           ELSE IF (I.GT.3) THEN
 !PRINT*, 'PRE:', SIZE(TMP1D(LOFFSET:LOFFSET+LNTOT-1)), SIZE(TOREAD)
-PRINT*, "     -> a)"
+!PRINT*, "     -> a)"
             TMP1D(LOFFSET:LOFFSET+LNTOT-1)=TOREAD
-PRINT*, "     -> b)"
+!PRINT*, "     -> b)"
             LOFFSET=LOFFSET+LNTOT
-PRINT*, "     -> c)"
+!PRINT*, "     -> c)"
             TO_BE_READ=TO_BE_READ-LNTOT
           ENDIF
           DEALLOCATE(TOREAD)

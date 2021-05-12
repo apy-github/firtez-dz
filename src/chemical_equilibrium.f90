@@ -259,6 +259,7 @@ MODULE CHEMICAL_EQUILIBRIUM
     IF ((NHYD.NE.NHYD).OR.(NELEC_NEW.NE.NELEC_NEW)) THEN
       PRINT*, 'I am ce.f90, Either Nh or Ne are NaN!'
       PRINT*, TEMP, PG, NHYD, DENS, NELEC
+      STOP
     ENDIF
     IF ( (NELEC.LT.0) .OR. (NHYD.LE.0) ) THEN
       PRINT*, 'I am ce.f90, Either Nh or Ne are below 0!'
