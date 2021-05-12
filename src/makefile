@@ -48,7 +48,8 @@ else
   #CC = mpicc
 #
   FPP = -cpp
-  # Debugging: FOPT = -fopenmp -fbacktrace -Wall -fcheck=all -g -finit-real=nan -finit-integer=0 -O0
+  # Debugging:
+ FOPT = -fopenmp -fbacktrace -Wall -fcheck=all -g -finit-real=nan -finit-integer=0 -O0
 #
   FR8 = -fdefault-real-8
 #
@@ -76,7 +77,6 @@ OBJ = \
 	derivvar.o \
 	allocate_utils.o \
 	misc.o \
-	splines.o \
 	log.o \
         atom_database.o \
 	model_spatial_extension.o \
@@ -156,9 +156,6 @@ misc.o: misc.f90 cons_param.o allocate_utils.o \
 	phys_param.o forward_param.o
 	$(FC) $(F90F) $(FOPT) misc.f90
 
-splines.o: splines.f90 cons_param.o
-	$(FC) $(F90F) $(FOPT) splines.f90
-
 log.o: log.f90 cons_param.o
 	$(FC) $(F90F) $(FOPT) log.f90
 
@@ -175,7 +172,7 @@ join_model.o: join_model.f90 cons_param.o grid_param.o \
         forward_param.o phys_param.o
 	$(FC) $(F90F) $(FOPT) join_model.f90
 
-damping.o: damping.f90 cons_param.o splines.o\
+damping.o: damping.f90 cons_param.o \
         code_modes.o log.o derivvar.o atom_database.o
 	$(FC) $(F90F) $(FOPT) damping.f90
 

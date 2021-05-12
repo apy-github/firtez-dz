@@ -5,8 +5,6 @@ MODULE HYDROSTATIC_TOOLS
   !
   USE CONS_PARAM, ONLY: SP, DP, GRAV, MAMU, KBOL
   USE CHEMICAL_EQUILIBRIUM, ONLY: GET_RHO
-  !USE SPLINE_NEW, ONLY: SPLINE_CUBIC_VAL, SPLINE_CUBIC_SET
-  USE SPLINES, ONLY: SPLINE, SPLINT
   USE ALLOCATE_UTILS, ONLY: ALLOCATE_1D_DP
   !
   IMPLICIT NONE
@@ -21,8 +19,6 @@ MODULE HYDROSTATIC_TOOLS
   REAL(DP)      ::  T1
   REAL(DP)      ::  U0
   REAL(DP)      ::  U1
-  !
-  REAL(DP), ALLOCATABLE, DIMENSION(:) :: ZPP
   !
   PUBLIC :: RK4_INTEGRATION_LOG_BOTTOM
   PUBLIC :: RK4_INTEGRATION_LOG
@@ -39,7 +35,6 @@ MODULE HYDROSTATIC_TOOLS
   PRIVATE ::  U0
   PRIVATE ::  U1
   !
-  PRIVATE :: ZPP
   PRIVATE
   !
   !************************************************
@@ -55,27 +50,20 @@ MODULE HYDROSTATIC_TOOLS
   !
   !------------------------------------------------
   !
-  SUBROUTINE RK4_SOLVE_LOG (ZI, PI, GI, RCTE, MH, NN, ZZ, TT, NEL, DPDZ)
+  SUBROUTINE RK4_SOLVE_LOG(ZI, PI, GI, RCTE, MH, TEM, NEL, DPDZ)
     !
-    REAL(DP), INTENT(IN)    :: ZI, PI, GI, RCTE, MH
-    INTEGER, INTENT(IN)     :: NN
-    REAL(DP), INTENT(IN)    :: ZZ(NN)
-    REAL(DP), INTENT(IN)    :: TT(NN)
+    REAL(DP), INTENT(IN)    :: ZI
+    REAL(DP), INTENT(IN)    :: PI
+    REAL(DP), INTENT(IN)    :: GI
+    REAL(DP), INTENT(IN)    :: RCTE
+    REAL(DP), INTENT(IN)    :: MH
+    REAL(DP), INTENT(IN)    :: TEM
     !
     REAL(DP), INTENT(INOUT) :: DPDZ, NEL
     REAL(DP)                :: INHYD,IPATOM,IPELEC,IDENS,IMOLECW
-    !REAL(SP)                :: DD2, DD3, TEM
-    REAL(DP)                :: TEM
 
-    ! FIRST, GIVEN ZI, ESTIMATE THE TEMPERATURE AT THAT HEIGHT:
-    !CALL SPLINE_CUBIC_VAL(NN,REAL(ZZ),REAL(TT) &
-    !    ,REAL(ZPP),REAL(ZI)/1000./100.,TEM,DD2,DD3)
-    CALL SPLINT(ZZ(:),TT(:),ZPP(:),NN,ZI/1000.0D0/100.0D0,TEM)
-    IF (TEM.LT.2500.0D0) TEM=2500.0D0
-    ! Once we have the temperature at that height, and the input estimation...
-    ! ...for the pressure
-    ! We can calculate the gas density provided the equation of state:
-    CALL GET_RHO(DBLE(TEM),DEXP(PI)&
+    ! Calculate the gas density provided the equation of state:
+    CALL GET_RHO(TEM,PI &
         ,INHYD,NEL,IPATOM,IPELEC,IDENS,IMOLECW)
     !
     DPDZ=-IMOLECW*MH*GI/(RCTE*TEM)
@@ -129,19 +117,14 @@ MODULE HYDROSTATIC_TOOLS
     MW8(1)=MOLECW
     VNHYD(1)=NHYD
     !
-    CALL ALLOCATE_1D_DP(ZPP,NZ,'ZPP')
-    ZPP(:)=0.0D0
-    !CALL SPLINE_CUBIC_SET(NZ,ZZ,REAL(T8(:)),0,0.,0,0.,ZPP)
-    CALL SPLINE(ZZ(:),T8(:),NZ,0.0D0,0.0D0,ZPP)
-    !
     DO K=2,NZ
       !
       DZ=DBLE(ZZ(K)-ZZ(K-1))*1000.0D0*100.0D0
       !
       T1=T0+DZ
       !
-      CALL RK4_LOG(DBLE(T0), DBLE(U0), DBLE(DZ), NZ, DBLE(ZZ) &
-          , T8(:), NELEC, RK4_SOLVE_LOG, U1)
+      CALL RK4_LOG(T0, U0, DZ, T8(K-1) &
+          , T8(K), NELEC, RK4_SOLVE_LOG, U1)
       !
       CALL GET_RHO(T8(K),DEXP(U1)&
           ,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
@@ -159,8 +142,6 @@ MODULE HYDROSTATIC_TOOLS
     RHO(:)=REAL(RHO8(:))
     PEL(:)=REAL(PEL8(:))
     MW(:)=REAL(MW8(:))
-    !
-    DEALLOCATE(ZPP)
     !
   END SUBROUTINE RK4_INTEGRATION_LOG_BOTTOM
   !
@@ -212,19 +193,14 @@ MODULE HYDROSTATIC_TOOLS
     MW8(NZ)=MOLECW
     VNHYD(NZ)=NHYD
     !
-    CALL ALLOCATE_1D_DP(ZPP,NZ,'ZPP')
-    ZPP(:)=0.0D0
-    !CALL SPLINE_CUBIC_SET(NZ,ZZ,REAL(T8(:)),0,0.,0,0.,ZPP)
-    CALL SPLINE(ZZ(:),T8(:),NZ,0.0D0,0.0D0,ZPP)
-    !
     DO K=NZ-1,1,-1
       !
       DZ=DBLE(ZZ(K)-ZZ(K+1))*1000.D0*100.D0
       !
       T1=T0+DZ
       !
-      CALL RK4_LOG(DBLE(T0), DBLE(U0), DBLE(DZ), NZ, DBLE(ZZ) &
-          , T8(:), NELEC, RK4_SOLVE_LOG, U1)
+      CALL RK4_LOG(T0, U0, DZ, T8(K+1) &
+          , T8(K), NELEC, RK4_SOLVE_LOG, U1)
       !
       CALL GET_RHO(T8(K),DEXP(U1)&
           ,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
@@ -242,8 +218,6 @@ MODULE HYDROSTATIC_TOOLS
     RHO(:)=REAL(RHO8(:))
     PEL(:)=REAL(PEL8(:))
     MW(:)=REAL(MW8(:))
-    !
-    DEALLOCATE(ZPP)
     !
   END SUBROUTINE RK4_INTEGRATION_LOG
   !
@@ -314,12 +288,6 @@ MODULE HYDROSTATIC_TOOLS
     MW8(IZ)=MOLECW
     VNHYD(IZ)=NHYD
     !
-    CALL ALLOCATE_1D_DP(ZPP,NZ,'ZPP')
-    ZPP(:)=0.0D0
-    !CALL SPLINE_CUBIC_SET(NZ,ZZ,REAL(T8(:)),0,0.,0,0.,ZPP)
-    CALL SPLINE(ZZ(:),T8(:),NZ,0.0D0,0.0D0,ZPP)
-    !
-    !
     ! WE FIRST GO UPWARDS
     DO K=IZ+1,NZ,1
       !
@@ -327,8 +295,8 @@ MODULE HYDROSTATIC_TOOLS
       !
       T1=T0+DZ
       !
-      CALL RK4_LOG(DBLE(T0), DBLE(U0), DBLE(DZ), NZ, DBLE(ZZ) &
-          , T8(:), NELEC, RK4_SOLVE_LOG, U1)
+      CALL RK4_LOG(T0, U0, DZ, T8(K-1) &
+          , T8(K), NELEC, RK4_SOLVE_LOG, U1)
       !
       CALL GET_RHO(T8(K),DEXP(U1)&
           ,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
@@ -354,8 +322,8 @@ MODULE HYDROSTATIC_TOOLS
       !
       T1=T0+DZ
       !
-      CALL RK4_LOG(DBLE(T0), DBLE(U0), DBLE(DZ), NZ, DBLE(ZZ) &
-          , T8(:), NELEC, RK4_SOLVE_LOG, U1)
+      CALL RK4_LOG(T0, U0, DZ, T8(K+1) &
+          , T8(K), NELEC, RK4_SOLVE_LOG, U1)
       !
       CALL GET_RHO(T8(K),DEXP(U1)&
           ,NHYD,NELEC,PATOM,PELEC,DENS,MOLECW)
@@ -375,22 +343,19 @@ MODULE HYDROSTATIC_TOOLS
     PEL(:)=REAL(PEL8(:))
     MW(:)=REAL(MW8(:))
     !
-    DEALLOCATE(ZPP)
-    !
   END SUBROUTINE RK4_INTEGRATION_LOG_MED
   !
   !-----------------------------------------------
   !
-  SUBROUTINE RK4_LOG(IT0,IY0,IDT,NN,ITEMP,SPLINZ,NELEC,ESUBROUTINE,IYO)
+  SUBROUTINE RK4_LOG(IT0,IY0,IDT,TM0,TM1,NELEC,ESUBROUTINE,IYO)
     !
     !Following wikipedia:
     !
     REAL(DP), INTENT(IN)                :: IT0
     REAL(DP), INTENT(IN)                :: IY0
     REAL(DP), INTENT(IN)                :: IDT
-    INTEGER, INTENT(IN)                 :: NN
-    REAL(DP), INTENT(IN), DIMENSION(NN) :: ITEMP
-    REAL(DP), INTENT(IN), DIMENSION(NN) :: SPLINZ
+    REAL(DP), INTENT(IN)                :: TM0
+    REAL(DP), INTENT(IN)                :: TM1
     REAL(DP), INTENT(INOUT)             :: NELEC
     REAL(DP), INTENT(INOUT)             :: IYO
     !
@@ -400,24 +365,31 @@ MODULE HYDROSTATIC_TOOLS
     REAL(DP)     :: IT1, IT2, IT3
     REAL(DP)     :: IY1, IY2, IY3
     REAL(DP)     :: DPDZ
+    REAL(DP)     :: TEM
     !
     ! For a RK4, we need four evaluations of the function:
-    CALL ESUBROUTINE(IT0,IY0,GRAV,KBOL,MAMU,NN,ITEMP,SPLINZ,NELEC,DPDZ)
+    TEM = TM0
+    CALL ESUBROUTINE(IT0,IY0,GRAV,KBOL,MAMU,TEM,NELEC,DPDZ)
     K1 = DPDZ * IDT
     !
     IT1=IT0+IDT/2.0D0
     IY1=IY0+K1/2.0D0
-    CALL ESUBROUTINE(IT1,IY1,GRAV,KBOL,MAMU,NN,ITEMP,SPLINZ,NELEC,DPDZ)
+    TEM = TM0 / IDT * (IT0+IDT-IT1) + TM1 / IDT * (IT1-IT0)
+    TEM = 10.0d0**(DLOG10(TM0) / IDT * (IT0+IDT-IT1) + DLOG10(TM1) / IDT * (IT1-IT0))
+    CALL ESUBROUTINE(IT1,IY1,GRAV,KBOL,MAMU,TEM,NELEC,DPDZ)
     K2 = DPDZ * IDT
     !
     IT2=IT0+IDT/2.0D0
     IY2=IY0+K2/2.0D0
-    CALL ESUBROUTINE(IT2,IY2,GRAV,KBOL,MAMU,NN,ITEMP,SPLINZ,NELEC,DPDZ)
+    !TEM = TM0 / IDT * (IT0+IDT-IT1) + TM1 / IDT * (IT1-IT0)
+    ! It is the same point so it is not necessary to repeat it
+    CALL ESUBROUTINE(IT2,IY2,GRAV,KBOL,MAMU,TEM,NELEC,DPDZ)
     K3 = DPDZ * IDT
     !
     IT3=IT0+IDT
     IY3=IY0+K3
-    CALL ESUBROUTINE(IT3,IY3,GRAV,KBOL,MAMU,NN,ITEMP,SPLINZ,NELEC,DPDZ)
+    TEM = TM1
+    CALL ESUBROUTINE(IT3,IY3,GRAV,KBOL,MAMU,TEM,NELEC,DPDZ)
     K4 = DPDZ * IDT
     !
     IYO = IY0 + 1.0D0 / 6.0D0 * ( K1 + 2.0D0 * K2 + 2.0D0 * K3 + K4 )
