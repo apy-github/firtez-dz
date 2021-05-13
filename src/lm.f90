@@ -31,8 +31,8 @@ MODULE LM
     !
     INTEGER                                           :: NP, NF
     !
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:,:)      :: JACOBIAN(NP,NF)
-    DOUBLE PRECISION, INTENT(INOUT), DIMENSION(:,:)   :: HSS(NP,NP)
+    REAL*8, INTENT(IN), DIMENSION(:,:)      :: JACOBIAN(NP,NF)
+    REAL*8, INTENT(INOUT), DIMENSION(:,:)   :: HSS(NP,NP)
     !
     HSS(:,:)=MATMUL(JACOBIAN, TRANSPOSE(JACOBIAN))
     !
@@ -44,10 +44,10 @@ MODULE LM
     !
     INTEGER                                         :: NP, I
     !
-    DOUBLE PRECISION                                :: LAMBDAP
+    REAL*8                                :: LAMBDAP
     !
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:,:)    :: HSS(NP,NP)
-    DOUBLE PRECISION, INTENT(INOUT), DIMENSION(:,:) :: TERM1(NP,NP)
+    REAL*8, INTENT(IN), DIMENSION(:,:)    :: HSS(NP,NP)
+    REAL*8, INTENT(INOUT), DIMENSION(:,:) :: TERM1(NP,NP)
     !
     TERM1(:,:)=HSS(:,:)
     DO I=1,NP
@@ -62,17 +62,17 @@ MODULE LM
     !
     INTEGER      :: NP, I
     !
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:,:)  :: M(NP,NP)
-    DOUBLE PRECISION, INTENT(INOUT), DIMENSION(:,:)  :: IM(NP,NP)
-    DOUBLE PRECISION, INTENT(IN), OPTIONAL          :: SVDTOL
+    REAL*8, INTENT(IN), DIMENSION(:,:)  :: M(NP,NP)
+    REAL*8, INTENT(INOUT), DIMENSION(:,:)  :: IM(NP,NP)
+    REAL*8, INTENT(IN), OPTIONAL          :: SVDTOL
     !
-    DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:,:)  :: CM
+    REAL*8, ALLOCATABLE, DIMENSION(:,:)  :: CM
     INTEGER                               :: INFO, LWORK
-    DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:,:) :: SVDU, SVDVY, SVDIS
-    DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:)   :: SVDS, WORK
+    REAL*8, ALLOCATABLE, DIMENSION(:,:) :: SVDU, SVDVY, SVDIS
+    REAL*8, ALLOCATABLE, DIMENSION(:)   :: SVDS, WORK
     INTEGER                               :: ISVDTOL
     INTEGER                                       :: CNT
-    DOUBLE PRECISION :: SVDTHRES
+    REAL*8 :: SVDTHRES
     !
     ALLOCATE(SVDU(NP,NP))
     SVDU(:,:)=0.D0
@@ -134,26 +134,27 @@ MODULE LM
   !
   !------------------------------------------------
   !
-  SUBROUTINE GET_PERTURBATION(NP, NF, IJACOBIAN, DIFF, LAMBDAP, DELTA, REG_PEN, REG_HSS, SVDTOL)
+  SUBROUTINE GET_PERTURBATION(NP, NF, IJACOBIAN, DIFF, LAMBDAP, DELTA, REG_PEN, REG_HSS, DTYPE, SVDTOL)
     !
-    INTEGER                                           :: NP, NF
+    INTEGER, INTENT(IN) :: NP, NF
     !
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:,:)      :: IJACOBIAN(NF,NP)
-    DOUBLE PRECISION, INTENT(IN)                      :: LAMBDAP
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:)        :: DIFF(NF)
+    REAL*8, INTENT(IN), DIMENSION(:,:)      :: IJACOBIAN(NF,NP)
+    REAL*8, INTENT(IN)                      :: LAMBDAP
+    REAL*8, INTENT(IN), DIMENSION(:)        :: DIFF(NF)
     !
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:)        :: REG_PEN(NP)
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:,:)      :: REG_HSS(NP,NP)
+    REAL*8, INTENT(IN), DIMENSION(:)        :: REG_PEN(NP)
+    REAL*8, INTENT(IN), DIMENSION(:,:)      :: REG_HSS(NP,NP)
     !
-    DOUBLE PRECISION, INTENT(INOUT), DIMENSION(:)     :: DELTA(NP)
-    DOUBLE PRECISION, INTENT(IN), OPTIONAL            :: SVDTOL
+    REAL*8, INTENT(INOUT), DIMENSION(:)     :: DELTA(NP)
+    INTEGER, INTENT(IN)                     :: DTYPE
+    REAL*8, INTENT(IN), OPTIONAL            :: SVDTOL
     !
-    DOUBLE PRECISION, DIMENSION(:,:)                  :: JACOBIAN(NP,NF)
-    DOUBLE PRECISION, DIMENSION(:,:)                  :: HSS(NP,NP)
-    DOUBLE PRECISION, DIMENSION(:,:)                  :: TERM1(NP,NP)
-    DOUBLE PRECISION, DIMENSION(:,:)                  :: ITERM1(NP,NP)
-    DOUBLE PRECISION, DIMENSION(:,:)                  :: TERM2B(NP,NF)
-    DOUBLE PRECISION, DIMENSION(:,:)                  :: TERM2(NP)
+    REAL*8, DIMENSION(:,:)                  :: JACOBIAN(NP,NF)
+    REAL*8, DIMENSION(:,:)                  :: HSS(NP,NP)
+    REAL*8, DIMENSION(:,:)                  :: TERM1(NP,NP)
+    REAL*8, DIMENSION(:,:)                  :: ITERM1(NP,NP)
+    REAL*8, DIMENSION(:,:)                  :: TERM2B(NP,NF)
+    REAL*8, DIMENSION(:,:)                  :: TERM2(NP)
     !
     INTEGER :: I
     !
@@ -176,32 +177,43 @@ MODULE LM
     CALL GET_TERM1(NP, HSS, LAMBDAP, TERM1)
     !
     ! Solve linear system:
-!    CALL NEW_CALCULATE_DELTA_UBICGSTAB(NP,DELTA,TERM1,TERM2)
-    !
-    ! Get Term 1 inverse:
-    IF (PRESENT(SVDTOL)) THEN
-      CALL GET_INVERSE(NP, TERM1, ITERM1, SVDTOL)
-    ELSE
-      CALL GET_INVERSE(NP, TERM1, ITERM1)
-    ENDIF
-    !
-    ! Get Delta:
-    !
-    DELTA(:)=MATMUL(ITERM1(:,:), TERM2(:))
+    SELECT CASE (DTYPE)
+      CASE(2)
+        CALL NEW_CALCULATE_DELTA_UBICGSTAB(NP,DELTA,TERM1,TERM2)
+      CASE(1)
+        !
+        ! Get Term 1 inverse:
+        IF (PRESENT(SVDTOL)) THEN
+          CALL GET_INVERSE(NP, TERM1, ITERM1, SVDTOL)
+        ELSE
+          CALL GET_INVERSE(NP, TERM1, ITERM1)
+        ENDIF
+        !
+        ! Get Delta:
+        !
+        DELTA(:)=MATMUL(ITERM1(:,:), TERM2(:))
+      CASE DEFAULT
+        PRINT*, ""
+        PRINT*, ""
+        PRINT*, " ERROR: LM does not support DTYPE=", DTYPE
+        PRINT*, ""
+        PRINT*, ""
+        STOP
+    ENDSELECT
     !
   END SUBROUTINE GET_PERTURBATION
   !
   SUBROUTINE GET_INVERSE_COV(NP, M, IM_COV)
     !
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:,:)    :: M(NP,NP)
-    DOUBLE PRECISION, INTENT(INOUT), DIMENSION(:,:) :: IM_COV(NP,NP)
+    REAL*8, INTENT(IN), DIMENSION(:,:)    :: M(NP,NP)
+    REAL*8, INTENT(INOUT), DIMENSION(:,:) :: IM_COV(NP,NP)
     !
     INTEGER                                         :: NP, I
     !
-    DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:,:)   :: CM
+    REAL*8, ALLOCATABLE, DIMENSION(:,:)   :: CM
     INTEGER                                         :: INFO, LWORK
-    DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:,:)   :: SVDU, SVDVY, SVDIS2
-    DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:)     :: SVDS, WORK
+    REAL*8, ALLOCATABLE, DIMENSION(:,:)   :: SVDU, SVDVY, SVDIS2
+    REAL*8, ALLOCATABLE, DIMENSION(:)     :: SVDS, WORK
     !
     ALLOCATE(SVDU(NP,NP))
     SVDU(:,:)=0.D0
@@ -260,26 +272,27 @@ MODULE LM
   !------------------------------------------------
   !
   SUBROUTINE PGET_PERTURBATION(NP, NF, IJACOBIAN &
-      , DIFF, LAMBDAP, DELT, REG_PEN, REG_HSS, SVDTOL)
+      , DIFF, LAMBDAP, DELT, REG_PEN, REG_HSS, DTYPE, SVDTOL)
     !
     INTEGER                                           :: NP, NF
     !
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:,:)      :: IJACOBIAN(NF,NP)
-    DOUBLE PRECISION, INTENT(IN)                      :: LAMBDAP
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:)        :: DIFF(NF)
+    REAL*8, INTENT(IN), DIMENSION(:,:)      :: IJACOBIAN(NF,NP)
+    REAL*8, INTENT(IN)                      :: LAMBDAP
+    REAL*8, INTENT(IN), DIMENSION(:)        :: DIFF(NF)
     !
-    DOUBLE PRECISION, INTENT(INOUT), DIMENSION(:)     :: DELT(NP)
+    REAL*8, INTENT(INOUT), DIMENSION(:)     :: DELT(NP)
     !
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:)        :: REG_PEN(NP)
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(:,:)      :: REG_HSS(NP,NP)
+    REAL*8, INTENT(IN), DIMENSION(:)        :: REG_PEN(NP)
+    REAL*8, INTENT(IN), DIMENSION(:,:)      :: REG_HSS(NP,NP)
     !
-    DOUBLE PRECISION, INTENT(IN), OPTIONAL                     :: SVDTOL
+    INTEGER, INTENT(IN)                     :: DTYPE
+    REAL*8, INTENT(IN), OPTIONAL                     :: SVDTOL
     !
-    DOUBLE PRECISION, DIMENSION(:,:), ALLOCATABLE     :: JACOBIAN2
-    DOUBLE PRECISION, DIMENSION(:,:), ALLOCATABLE     :: LESSIAN2
+    REAL*8, DIMENSION(:,:), ALLOCATABLE     :: JACOBIAN2
+    REAL*8, DIMENSION(:,:), ALLOCATABLE     :: LESSIAN2
     !
-    DOUBLE PRECISION, DIMENSION(:), ALLOCATABLE       :: RV2
-    DOUBLE PRECISION, DIMENSION(:), ALLOCATABLE       :: DELT2
+    REAL*8, DIMENSION(:), ALLOCATABLE       :: RV2
+    REAL*8, DIMENSION(:), ALLOCATABLE       :: DELT2
     INTEGER, DIMENSION(:)     :: NZE(NP)
     INTEGER :: I, J, NPNZ, NPNZ2
     !
@@ -340,7 +353,7 @@ PRINT*, ' [', 'Using ', NPNZ, ' out of ', NP,']'
 print*, shape(lessian2), ';', shape(rv2), ';', shape(delt2)
 !stop
     CALL GET_PERTURBATION(NPNZ, NF, JACOBIAN2, DIFF &
-        , LAMBDAP, DELT2, RV2, LESSIAN2, SVDTOL)
+        , LAMBDAP, DELT2, RV2, LESSIAN2, DTYPE, SVDTOL)
     !
     NPNZ=0
     DO I=1,NP
@@ -368,18 +381,18 @@ print*, shape(lessian2), ';', shape(rv2), ';', shape(delt2)
     !      K.A.Hawick, K.Dincer, G.Robinson, G.C.Fox
     !
     INTEGER, INTENT(IN)   :: NPAR
-    DOUBLE PRECISION, INTENT(INOUT), DIMENSION(NPAR)  :: DELT
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(NPAR,NPAR)  :: ALP
-    DOUBLE PRECISION, INTENT(IN), DIMENSION(NPAR)  :: BET
+    REAL*8, INTENT(INOUT), DIMENSION(NPAR)  :: DELT
+    REAL*8, INTENT(IN), DIMENSION(NPAR,NPAR)  :: ALP
+    REAL*8, INTENT(IN), DIMENSION(NPAR)  :: BET
     !
-    DOUBLE PRECISION, DIMENSION(NPAR) :: XV, PV, RV, QV, CHECK!, XV0
-    DOUBLE PRECISION :: CRHO, CALPHA, CBETA, CRHO0
+    REAL*8, DIMENSION(NPAR) :: XV, PV, RV, QV, CHECK!, XV0
+    REAL*8 :: CRHO, CALPHA, CBETA, CRHO0
     LOGICAL :: FAILED
     !
     INTEGER :: ITER
-    DOUBLE PRECISION :: CONDIT
-    DOUBLE PRECISION :: DCONDIT
-    DOUBLE PRECISION :: PCONDIT
+    REAL*8 :: CONDIT
+    REAL*8 :: DCONDIT
+    REAL*8 :: PCONDIT
     !
     DELT(:)=0.0D0
     !
