@@ -240,7 +240,7 @@ pre_post_duties.o: pre_post_duties.f90 grid_param.o \
 	$(FC) $(F90F) $(FOPT) pre_post_duties.f90
 
 hydrostatic_tools.o: hydrostatic_tools.f90 cons_param.o \
-        chemical_equilibrium.o splines.o
+        chemical_equilibrium.o
 	$(FC) $(F90F) $(FOPT) hydrostatic_tools.f90
 
 forward.o: forward.f90 cons_param.o grid_param.o \
