@@ -21,7 +21,7 @@ MODULE DAMPING
   !  This is the s-p data from Anstee and O'Mara 1995, MNRAS 276,859
   !  https://raw.githubusercontent.com/barklem/abo-cross/master/cross_int_extended/spdata.dat
   !  
-  REAL(DP), PARAMETER :: CS_SP(43,46) = RESHAPE(SHAPE= (/43,46 /), SOURCE= &
+  REAL(DP), PARAMETER :: CS_SP(46,43) = RESHAPE(SHAPE= (/46,43 /), SOURCE= &
       (/126, 138, 165, 200, 249, 296, 338, 383, 435, 490, 552, 617, 685, 769 &
         , 837, 925, 1010, 1082, 1163, 1236, 1300, 1319, 1722, 1852, 1808, 1940 &
         , 2218, 2446, 2592, 2756, 2961, 3413, 3735, 4076, 4451, 4866, 5190 &
@@ -195,9 +195,10 @@ MODULE DAMPING
         , 4678, 4649, 4598, 4532, 4460, 4389, 4325, 4270, 4223, 4189, 4177 &
         , 4156, 4154, 4105, 4108, 4113, 4112, 4129, 4075, 4080, 4010, 4132 &
         , 4313, 4400, 4346, 4450, 4424, 4725, 4593, 4757, 4860, 4848, 4847 &
-        , 4703, 4619, 4505, 4128, 3570, 2957, 3496/))
+        , 4703, 4619, 4505, 4128, 3570, 2957, 3496/) &
+        , order=(/2,1/))
 
-  REAL(DP), PARAMETER :: AL_SP(43,46) = RESHAPE(SHAPE= (/43,46 /), SOURCE= &
+  REAL(DP), PARAMETER :: AL_SP(46,43) = RESHAPE(SHAPE= (/46,43 /), SOURCE= &
       (/.268, .268, .333, .377, .322, .284, .277, .268, .268, .270, .264, .262 &
         , .260, .262, .254, .253, .249, .246, .244, .256, .261, .281, .265 &
         , .262, .260, .256, .237, .190, .176, .141, .121, .183, .141, .148 &
@@ -377,7 +378,8 @@ MODULE DAMPING
         , .360, .373, .385, .399, .412, .422, .430, .434, .434, .430, .424 &
         , .414, .404, .392, .379, .365, .348, .346, .318, .314, .253, .227 &
         , .194, .157, .105, .066, .026, .983, .025, .150, .948, .962, .991 &
-        , .014, .029, .062, .137, .239, .348, .431, .456/))
+        , .014, .029, .062, .137, .239, .348, .431, .456/) &
+        , order=(/2,1/))
 
   ! 
   !  p-d data from Barklem and O'Mara 1997, MNRAS, 290, 102
@@ -508,7 +510,8 @@ MODULE DAMPING
         , 3810, 3821, 3888, 3900, 4002, 4062, 4122, 3967, 3524, 3048, 3790 &
         , 5763, 5741, 5720, 5694, 5685, 5677, 5670, 5655, 5652, 5611, 5553 &
         , 5500, 5422, 5371, 5311, 5329, 5346, 5312, 5319, 5335, 5264, 5153 &
-        , 5054, 5002, 5015, 4941, 4942, 4863, 4833, 4508, 4058, 3823, 3912/))
+        , 5054, 5002, 5015, 4941, 4942, 4863, 4833, 4508, 4058, 3823, 3912/) &
+        , order=(/2,1/))
   REAL(DP), PARAMETER :: AL_PD(43,33) = RESHAPE(SHAPE= (/43,33/), SOURCE= &
       (/.289, .283, .284, .277, .280, .279, .271, .274, .271, .251, .248, .241 &
         , .247, .249, .254, .268, .303, .308, .300, .279, .254, .305, .246 &
@@ -638,7 +641,8 @@ MODULE DAMPING
         , .620, .613, .596, .562, .542, .596, .694, .840, .904, .889, .750 &
         , .751, .751, .748, .744, .739, .733, .725, .720, .721, .720, .722 &
         , .721, .713, .703, .698, .682, .655, .651, .639, .654, .746, .583 &
-        , .589, .593, .606, .610, .609, .665, .768, .883, .931, .889/))
+        , .589, .593, .606, .610, .609, .665, .768, .883, .931, .889/) &
+        , order=(/2,1/))
   !  
   ! d-f data from Barklem, O'Mara and Ross, 1998, MNRAS, 296, 1057
   ! https://github.com/barklem/abo-cross/blob/master/cross_int_extended/dfdata.dat
@@ -726,7 +730,8 @@ MODULE DAMPING
         , 3165, 3003, 3083, 3028, 3053, 2885, 2332, 2292, 3357, 3398, 3608 &
         , 3844, 4243, 4454, 5157, 5138, 5109, 5084, 5070, 5081, 5090, 5080 &
         , 5097, 5094, 5054, 5044, 4955, 4928, 4724, 4574, 4525, 4265, 4330 &
-        , 4117, 3903, 4122, 3547, 3448, 3531, 3660, 4033, 3993/))
+        , 4117, 3903, 4122, 3547, 3448, 3531, 3660, 4033, 3993/) &
+        , order=(/2,1/))
   REAL(DP), PARAMETER :: AL_DF(33,28) = RESHAPE(SHAPE= (/33,28/), SOURCE= &
       (/.294, .286, .299, .300, .306, .309, .310, .310, .316, .318, .325, .351 &
         , .363, .369, .371, .379, .373, .351, .334, .415, .574, .715, .447 &
@@ -811,7 +816,8 @@ MODULE DAMPING
         , .593, .565, .527, .485, .443, .469, .644, .758, .771, .687, .709 &
         , .699, .669, .666, .754, .487, .484, .480, .477, .478, .474, .471 &
         , .466, .462, .444, .442, .439, .433, .438, .442, .449, .452, .446 &
-        , .508, .616, .637, .601, .631, .594, .577, .618, .701, .797/))
+        , .508, .616, .637, .601, .631, .594, .577, .618, .701, .797/) &
+        , order=(/2,1/))
   !
   PUBLIC :: GET_DAMPING
   PUBLIC :: GET_NEFF
@@ -1141,18 +1147,18 @@ ENDIF
     IF (IERR .EQ. 0) THEN
        !
        DO I=1,46
-          NSSG(I)=1.0+REAL(I-1)*0.1
+          NSSG(I)=1.0+REAL(I-1,kind=dp)*0.1
        ENDDO
        !
        DO I=1,43
-          NSPG(I)=1.3+REAL(I-1)*0.1
+          NSPG(I)=1.3+REAL(I-1,kind=dp)*0.1
        ENDDO
        !
        IX=MINLOC(ABS(NSS-NSSG),dim=1)
        IY=MINLOC(ABS(NSP-NSPG),dim=1)
        !
-       IF (NSS < NSSG(IX)) IX=IX-1
-       IF (NSP < NSSG(IY)) IY=IY-1
+       IF (NSS .lt. NSSG(IX)) IX=IX-1
+       IF (NSP .lt. NSSG(IY)) IY=IY-1
        ! Bilinear interpolation: SIGMA
        S1=CS_SP(IX,IY)
        S2=CS_SP(IX+1,IY)
@@ -1204,16 +1210,16 @@ ENDIF
     IF (IERR .EQ. 0) THEN
        !
        DO I=1,33
-          NSDG(I)=2.3+REAL(I-1)*0.1
+          NSDG(I)=2.3+REAL(I-1,kind=dp)*0.1
        ENDDO
        DO I=1,43
-          NSPG(I)=1.3+REAL(I-1)*0.1
+          NSPG(I)=1.3+REAL(I-1,kind=dp)*0.1
        ENDDO
        IX=MINLOC(ABS(NSP-NSPG), dim=1)
        IY=MINLOC(ABS(NSD-NSDG), dim=1)
        !
-       IF (NSP < NSPG(IX)) IX=IX-1
-       IF (NSD < NSDG(IY)) IY=IY-1
+       IF (NSP .lt. NSPG(IX)) IX=IX-1
+       IF (NSD .lt. NSDG(IY)) IY=IY-1
        ! Bilinear interpolation: SIGMA
        S1=CS_PD(IX,IY)
        S2=CS_PD(IX+1,IY)
@@ -1256,25 +1262,25 @@ ENDIF
     IF (OTRANSITION(2) .EQ. 3) NSF=NUPP_EFF
     ! Check table limits
     if ((NSD.gt.5.5).or.(NSD.lt.2.3).or.(NSF.gt.6.).or.(NSF.lt.3.3)) then
-       PRINT*, NSD, 4
+       PRINT*, NSD, 5.5
        PRINT*, NSD, 2.3
-       PRINT*, NSF, 5
+       PRINT*, NSF, 6
        PRINT*, NSF, 3.3
        IERR=3
     ENDIF
     !
     IF (IERR .EQ. 0) THEN
       DO I=1,33
-        NSDG(I)=2.3+REAL(I-1)*0.1
+        NSDG(I)=2.3+REAL(I-1,kind=dp)*0.1
       ENDDO
       DO I=1,28
-        NSFG(I)=3.3+REAL(I-1)*0.1
+        NSFG(I)=3.3+REAL(I-1,kind=dp)*0.1
       ENDDO
       IX=MINLOC(ABS(NSD-NSDG), dim=1)
       IY=MINLOC(ABS(NSF-NSFG), dim=1)
       !
-      IF (NSD < NSDG(IX)) IX=IX-1
-      IF (NSF < NSFG(IY)) IY=IY-1
+      IF (NSD .lt. NSDG(IX)) IX=IX-1
+      IF (NSF .lt. NSFG(IY)) IY=IY-1
       ! Bilinear interpolation: SIGMA
       S1=CS_DF(IX,IY)
       S2=CS_DF(IX+1,IY)
