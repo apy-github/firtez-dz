@@ -709,11 +709,11 @@ def compare_tv(stokes, pars, waves, fignum=1\
     , intkwars={}):
 
   if (type(stokes)!=list):
-    stokes=list(stokes)
+    stokes=[stokes,]
   if (type(pars)!=list):
-    pars=list(pars)
+    pars=[pars,]
   if (type(waves)!=list):
-    waves=list(waves)
+    waves=[waves,]
 
   # Check shape of all the stk_profiles3D:
   arethesame = True
@@ -992,10 +992,6 @@ def plot_profiles(profiles, pars=['all'] \
               ax[itn2, itn1].set_xlabel(r'$\lambda$ [px]')
             elif (axis == 'w'):
               ax[itn2, itn1].set_xlabel(r'$\lambda$ [m$\AA$]')
-        else:
-          ax[itn2, itn1].xaxis.set_ticklabels([])
-      else:
-        ax[itn2, itn1].xaxis.set_ticklabels([])
  
   if (len(rangex)==2):
     lrangex=rangex[0]*1.
@@ -2017,8 +2013,8 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
   
   
     xlims = iax.get_xlim()
-  
-    ftauz = interp1d(taus, zs)
+
+    ftauz = interp1d(taus, zs, bounds_error=False)#, fill_value="extrapolate"))
     zvalues = ftauz(tauvalues)
   
     axfracs = (np.array(zvalues) - xlims[0]) / (xlims[1] - xlims[0])
@@ -2162,10 +2158,10 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
               ax[itn2, itn1].set_xlabel(models[0].tv_defaults['label']['z'])
             elif (axis == 't'):
               ax[itn2, itn1].set_xlabel(models[0].tv_defaults['label']['tau'])
-        else:
-          ax[itn2, itn1].xaxis.set_ticklabels([])
-      else:
-        ax[itn2, itn1].xaxis.set_ticklabels([])
+      #  else:
+      #    ax[itn2, itn1].xaxis.set_ticklabels([])
+      #else:
+      #  ax[itn2, itn1].xaxis.set_ticklabels([])
           
   if (len(rangex)==2):
     lrangex=rangex[0]*1.
