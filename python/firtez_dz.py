@@ -506,9 +506,9 @@ class stk_profile3D(object):
       , intkwars={}, nearest=False):
 
     if (type(pars)!=list):
-      pars=list(pars)
+      pars=[pars,]
     if (type(waves)!=list):
-      waves=list(waves)
+      waves=[waves,]
 
     if (pars[0].lower()=='all'):
       pars = ['stki', 'stkq', 'stku', 'stkv']
@@ -617,17 +617,16 @@ class stk_profile3D(object):
           , sym=self.tv_defaults['symmetry'][itp])
       # Remove some ticklabels:
       # Y:
-      if ( (len(pars)>1) & (itnp>0) ):
-        for itn in range(len(waves)):
-          ax[itn,itnp].yaxis.set_ticklabels([])
-      if (itnp==0):
-        for itn in range(len(waves)):
-          ax[itn,itnp].set_ylabel('y [px]')#\n%s' ylabel[itn])
+#      if ( (len(pars)>1) & (itnp>0) ):
+#        for itn in range(len(waves)):
+#          ax[itn,itnp].yaxis.set_ticklabels([])
+#      if (itnp==0):
+#        for itn in range(len(waves)):
+#          ax[itn,itnp].set_ylabel('y [px]')#\n%s' ylabel[itn])
+      for itn in range(len(waves)):
+        ax[itn,itnp].set_ylabel('y [px]')#\n%s' ylabel[itn])
       # X:
-      if (len(waves)>1):
-        for itn in range(len(waves)-1):
-          ax[itn,itnp].xaxis.set_ticklabels([])
-        ax[-1,itnp].set_xlabel('x [px]')
+      ax[-1,itnp].set_xlabel('x [px]')
     
     
     fg.tight_layout()
@@ -1827,9 +1826,9 @@ class atm_model3D(object):
       , intkwars={}, nearest=False):
 
     if (type(pars)!=list):
-      pars=list(pars)
+      pars=[pars,]
     if (type(heights)!=list):
-      heights=list(heights)
+      heights=[heights,]
 
     if ( (axis!='z') & (axis!='t') ):
       print("\tAxis must be either 'z' (z scale) or 't' (tau scale)")
@@ -1956,18 +1955,11 @@ class atm_model3D(object):
           , sym=self.tv_defaults['symmetry'][itp])
       # Remove some ticklabels:
       # Y:
-      if ( (len(pars)>1) & (itnp>0) ):
-        for itn in range(len(heights)):
-          ax[itn,itnp].yaxis.set_ticklabels([])
       if (itnp==0):
         for itn in range(len(heights)):
           ax[itn,itnp].set_ylabel('%s\ny [px]' % (ylabels[itn],))
       # X:
-      if (len(heights)>1):
-        for itn in range(len(heights)-1):
-          ax[itn,itnp].xaxis.set_ticklabels([])
-        ax[-1,itnp].set_xlabel('x [px]')
-    
+      ax[-1,itnp].set_xlabel('x [px]')
     
     fg.tight_layout()
     pl.show()
