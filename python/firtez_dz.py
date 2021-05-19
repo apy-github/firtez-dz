@@ -252,7 +252,7 @@ class stk_profile3D(object):
     label['stkv']=[r'V/I$_{{\rm c}}$ [$\times10^{3}$]', r'V [$\times10^{3}$]']
     self.__tv_defaults['label']=label
 
-    self.__tv_defaults['xlabel']=[r'$\lambda$ [px]', r'$\lambda$ [m$\AA$]']
+    self.__tv_defaults['xlabel']=[r'$\lambda$ [px]', r'$\lambda-\lambda_{0}$ [m$\AA$]']
 
     return
 
@@ -499,7 +499,7 @@ class stk_profile3D(object):
 
     return
   #
-  def __get_pars(self,pars):
+  def get_pars(self,pars):
 
     if (pars[0].lower()=='all'):
       ipars = ['stki', 'stkq', 'stku', 'stkv']
@@ -548,7 +548,7 @@ class stk_profile3D(object):
     if (type(waves)!=list):
       waves=[waves,]
 
-    ipars = self.__get_pars(pars)
+    ipars = self.get_pars(pars)
 
     if ( (axis!='p') & (axis!='w') ):
       print("\tAxis must be either 'p' (pixel scale) or 'w' (wavelength scale)")
@@ -911,8 +911,11 @@ def plot_profiles(profiles \
           * rangex (default='as given from profiles'): list of two elements giving the minimum
                                          and maximum limits for the x axis
 
-          * fkwargs (default={'num':1}): keywords to pass to matplotlib.pyplot subplots call
-                                         avoiding ncols, nrows, sharex, squeeze, clear, and sharey
+          * fkwargs (default={'num':1}): dictionary with the keywords to pass to matplotlib.pyplot
+                                         subplots call avoiding ncols, nrows, sharex, squeeze
+                                         , clear, and sharey
+                     example:
+                          fkwargs = {"num":1,"figsize":(5,7)}
           * pkwargs (default='default matplotlib.pyplot kwargs'): one or a list of dictionaries with
                                          the (matplotlib.pyplot plot standard) keywords to pass to
                                          matplotlib.pyplot plot call.
@@ -944,7 +947,7 @@ def plot_profiles(profiles \
     show_labels = False
     labels = [''] * len(profiles)
 
-  ipars = profiles[0].__get_pars(pars)
+  ipars = profiles[0].get_pars(pars)
 
   if ( (len(labels)!=len(profiles)) ):
     print("Length of labels must be equal to profiles' length")
