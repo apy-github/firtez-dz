@@ -111,8 +111,8 @@ class stk_profile3D(object):
     self.stkv = np.zeros((self.nw, self.nx, self.ny))
     self.shape = np.shape(self.stki)
     # For tv:
-    self.tv_defaults = {}
-    self.set_tv_defaults()
+    self.__tv_defaults = {}
+    self.__set_tv_defaults()
 
     return
   #
@@ -215,44 +215,44 @@ class stk_profile3D(object):
   #
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   #
-  def set_tv_defaults(self):
+  def __set_tv_defaults(self):
 
     cmaps = {}
     cmaps['stki']='viridis'
     cmaps['stkq']='RdGy'
     cmaps['stku']='RdGy'
     cmaps['stkv']='RdGy'
-    self.tv_defaults['cmap']=cmaps
+    self.__tv_defaults['cmap']=cmaps
 
     cscale = {}
     cscale['stki']='linear'
     cscale['stkq']='linear'
     cscale['stku']='linear'
     cscale['stkv']='linear'
-    self.tv_defaults['cscale']=cscale
+    self.__tv_defaults['cscale']=cscale
 
     factor = {}
     factor['stki']=1.e0
     factor['stkq']=1.e3
     factor['stku']=1.e3
     factor['stkv']=1.e3
-    self.tv_defaults['factor']=factor
+    self.__tv_defaults['factor']=factor
 
     symmetry = {}
     symmetry['stki']=False
     symmetry['stkq']=True
     symmetry['stku']=True
     symmetry['stkv']=True
-    self.tv_defaults['symmetry']=symmetry
+    self.__tv_defaults['symmetry']=symmetry
 
     label = {}
     label['stki']=[r'I/I$_{{\rm c}}$', r'I']
     label['stkq']=[r'Q/I$_{{\rm c}}$ [$\times10^{3}$]', r'Q [$\times10^{3}$]']
     label['stku']=[r'U/I$_{{\rm c}}$ [$\times10^{3}$]', r'U [$\times10^{3}$]']
     label['stkv']=[r'V/I$_{{\rm c}}$ [$\times10^{3}$]', r'V [$\times10^{3}$]']
-    self.tv_defaults['label']=label
+    self.__tv_defaults['label']=label
 
-    self.tv_defaults['xlabel']=[r'$\lambda$ [px]', r'$\lambda$ [m$\AA$]']
+    self.__tv_defaults['xlabel']=[r'$\lambda$ [px]', r'$\lambda$ [m$\AA$]']
 
     return
 
@@ -499,30 +499,67 @@ class stk_profile3D(object):
 
     return
   #
+  def __get_pars(self,pars):
+
+    if (pars[0].lower()=='all'):
+      ipars = ['stki', 'stkq', 'stku', 'stkv']
+    else:
+      ipars = []
+      for itp in pars:
+        if("stk" in itp):
+          to_add = itp
+        else:
+          to_add = "stk%s" % (itp,)
+        if (not(to_add in ipars)):
+          ipars.append(to_add)
+
+    return ipars
+  #
   # TV
   #
-  def tv(self, pars, waves, fignum=1\
-      , fkwargs={}, ikwargs=[] \
+  def tv(self \
+      , pars=['all',], waves=[0], fignum=1\
+      , axis='p', fkwargs={}, ikwargs=[] \
       , intkwars={}, nearest=False):
+    """
 
+      tv method for stk_profile3D class
+
+        inputs:
+          [ mandatory ]
+            * profiles: one or a list of stk_profile3d class elements.
+          [ optional ]
+            * pars (default='all'):
+            * axis (default='p'):
+            * labels (default=None):
+
+            * fkwargs (default={'num':1}): keywords to pass to matplotlib.pyplot subplots call
+                                           avoiding ncols, nrows, sharex, squeeze, clear, and sharey
+            * pkwargs (default='default matplotlib.pyplot kwargs'): one or a list of dictionaries with
+                                           the (matplotlib.pyplot plot standard) keywords to pass to
+                                           matplotlib.pyplot plot call.
+                                           Length of the list: 1 or the same as the supplied profiles
+                                           (mandatory argument) length
+
+
+    """
     if (type(pars)!=list):
       pars=[pars,]
     if (type(waves)!=list):
       waves=[waves,]
 
-    if (pars[0].lower()=='all'):
-      pars = ['stki', 'stkq', 'stku', 'stkv']
+    ipars = self.__get_pars(pars)
 
-   # if ( (axis!='p') & (axis!='w') ):
-   #   print("\tAxis must be either 'p' (pixel scale) or 'w' (wavelength scale)")
-   #   return
+    if ( (axis!='p') & (axis!='w') ):
+      print("\tAxis must be either 'p' (pixel scale) or 'w' (wavelength scale)")
+      return
 
  #   if (axis=='p'):
  #     xit = np.arange(self.nw, dtype=np.float32)
  #   elif (axis=='w'):
  #     xit = getattr(self, 'wave')
 
-    toshow = np.zeros((len(waves), len(pars), self.nx, self.ny))
+    toshow = np.zeros((len(waves), len(ipars), self.nx, self.ny))
 
  #   ylabels = []
  #   for itw in len(waves):
@@ -537,7 +574,7 @@ class stk_profile3D(object):
       if ( (ith<0) | ((ith+1)>self.nw)):
         print('\tOut of wavelength range: %i out of [%i-%i]' % (ith, 0, self.nw-1))
         return
-      for itnp, itp in enumerate(pars):
+      for itnp, itp in enumerate(ipars):
         itpar = getattr(self, itp)
         toshow[itnh, itnp, :, :]=itpar[ith,:,:]*1.
 
@@ -589,51 +626,55 @@ class stk_profile3D(object):
       # Get data aspect ratio:
       asp_rat_2 = (1.*self.nx) / (1.*self.ny)
       # Get toshow aspect ratio:
-      asp_rat_3 = (1.*len(pars)) / (1.*len(waves))
-      aps_rat_4 = asp_rat_2 * asp_rat_3
+      asp_rat_3 = (1.*len(ipars)) / (1.*len(waves))
+      asp_rat_4 = asp_rat_2 * asp_rat_3
       #
-      if (aps_rat_4>1.):
-        nxs = xs * aps_rat_4
+      if (asp_rat_4>1.):
+        nxs = xs * asp_rat_4
         nys = ys * 1.
       else:
         nxs = xs * 1.
-        nys = ys / aps_rat_4
+        nys = ys / asp_rat_4
+      nmax = np.max([nxs,nys]) / 10.
+      nxs /= nmax
+      nys /= nmax
       print(nxs, nys)
-      pl.rcParams.update({'figure.figsize':(nxs,nys)})
+      fkwargs['figsize'] = (nxs,nys)
     #
-    pl.close(fignum)
-    fg, ax = pl.subplots(ncols=len(pars),nrows=len(waves), num=fignum \
-        , squeeze=False, sharex=True, sharey=True, **fkwargs)
+    #
+    #
+    if (not("num" in fkwargs)):
+      fkwargs["num"] = 1
 
+    pl.close(fkwargs["num"])
+    fg, ax = pl.subplots(ncols=len(ipars),nrows=len(waves) \
+        , squeeze=False, sharex=True, sharey=True, clear=True, **fkwargs)
+
+    #
+    #
+    #
     itnorm=1
     if (self.stki.mean()<5.):
       itnorm=0
 
-    for itnp, itp in enumerate(pars):
+    for itnp, itp in enumerate(ipars):
       show_col(ax[:,itnp], toshow[:,itnp,:,:] \
-          , self.tv_defaults['cmap'][itp] \
-          , self.tv_defaults['factor'][itp] \
-          , self.tv_defaults['label'][itp][itnorm] \
-          , sym=self.tv_defaults['symmetry'][itp])
+          , self.__tv_defaults['cmap'][itp] \
+          , self.__tv_defaults['factor'][itp] \
+          , self.__tv_defaults['label'][itp][itnorm] \
+          , sym=self.__tv_defaults['symmetry'][itp])
       # Remove some ticklabels:
       # Y:
-#      if ( (len(pars)>1) & (itnp>0) ):
-#        for itn in range(len(waves)):
-#          ax[itn,itnp].yaxis.set_ticklabels([])
-#      if (itnp==0):
-#        for itn in range(len(waves)):
-#          ax[itn,itnp].set_ylabel('y [px]')#\n%s' ylabel[itn])
       for itn in range(len(waves)):
         ax[itn,itnp].set_ylabel('y [px]')#\n%s' ylabel[itn])
       # X:
       ax[-1,itnp].set_xlabel('x [px]')
-    
-    
+
+#    if (autofigsize==1):
+#      pl.rcParams['figure.figsize']=(xs,ys)
+
     fg.tight_layout()
     pl.show()
-
-    if (autofigsize==1):
-      pl.rcParams['figure.figsize']=(xs,ys)
 
     return
 
@@ -817,10 +858,10 @@ def compare_tv(stokes, pars, waves, fignum=1\
 
   for itnp, itp in enumerate(pars):
     show_col(ax[:,itnp], toshow[:,itnp,:,:] \
-        , stokes[0].tv_defaults['cmap'][itp] \
-        , stokes[0].tv_defaults['factor'][itp] \
-        , stokes[0].tv_defaults['label'][itp][itnorm] \
-        , sym=stokes[0].tv_defaults['symmetry'][itp])
+        , stokes[0].__tv_defaults['cmap'][itp] \
+        , stokes[0].__tv_defaults['factor'][itp] \
+        , stokes[0].__tv_defaults['label'][itp][itnorm] \
+        , sym=stokes[0].__tv_defaults['symmetry'][itp])
     # Remove some ticklabels:
     # Y:
     if ( (len(pars)>1) & (itnp>0) ):
@@ -849,17 +890,44 @@ def compare_tv(stokes, pars, waves, fignum=1\
   #
 
 
-def plot_profiles(profiles, pars=['all'] \
-    ,fnum=1,itx=[0,],ity=[0,], axis='w', labels=[] \
-    , rangex=[], pkwargs={} \
-    , pargs=(), pkargs={}, fkwargs={}):
+def plot_profiles(profiles \
+    , pars=['all'], axis='p', labels=[] \
+    , rangex=[], rangey=[] \
+    , itx=[0,], ity=[0,] \
+    , fkwargs={} \
+    , pkwargs={}):
+  """
 
+    plot_profiles method:
+
+      inputs:
+        [ mandatory ]
+          * profiles: one or a list of stk_profile3d class elements.
+        [ optional ]
+          * pars (default='all'):
+          * axis (default='p'):
+          * labels (default=None):
+
+          * rangex (default='as given from profiles'): list of two elements giving the minimum
+                                         and maximum limits for the x axis
+
+          * fkwargs (default={'num':1}): keywords to pass to matplotlib.pyplot subplots call
+                                         avoiding ncols, nrows, sharex, squeeze, clear, and sharey
+          * pkwargs (default='default matplotlib.pyplot kwargs'): one or a list of dictionaries with
+                                         the (matplotlib.pyplot plot standard) keywords to pass to
+                                         matplotlib.pyplot plot call.
+                                         Length of the list: 1 or the same as the supplied profiles
+                                         (mandatory argument) length
+
+  """
+
+  if (type(profiles)!=list):
+    profiles=[profiles,]
+  #
   if (type(itx)!=list):
     itx=[itx,]
   if (type(ity)!=list):
     ity=[ity,]
-  if (type(profiles)!=list):
-    profiles=[profiles,]
   if (type(labels)!=list):
     labels=[labels,]
   if (type(pars)!=list):
@@ -876,14 +944,7 @@ def plot_profiles(profiles, pars=['all'] \
     show_labels = False
     labels = [''] * len(profiles)
 
-  if (pars[0]=='all'):
-    pars = ['stki', 'stkq', 'stku', 'stkv']
-
-
-#  if (len(linestyle)==1):
-#    linestyle = linestyle * len(profiles)
-#  if (len(linestyle)==0):
-#    linestyle = ['-'] * len(profiles)
+  ipars = profiles[0].__get_pars(pars)
 
   if ( (len(labels)!=len(profiles)) ):
     print("Length of labels must be equal to profiles' length")
@@ -902,20 +963,24 @@ def plot_profiles(profiles, pars=['all'] \
   #
   # Number of columns and rows:
   #
-  sqrtabove = np.int32(np.ceil(np.sqrt(len(pars))))
+  sqrtabove = np.int32(np.ceil(np.sqrt(len(ipars))))
   axestorem = 0
-  if (len(pars)%2 != 0):
-    ncols=np.max([1,sqrtabove//2*2])
-    nrows=np.int32(np.ceil((1.*len(pars))/(1.*ncols)))
-    axestorem = ncols * nrows - len(pars)
-  else:
-    ncols=sqrtabove
-    nrows=np.int16(np.ceil(len(pars)/np.float(ncols)))
+#  if (len(pars)%2 != 0):
+  ncols=np.max([1,(sqrtabove//2)*2])
+  nrows=np.int32(np.ceil((1.*len(ipars))/(1.*ncols)))
+  axestorem = ncols * nrows - len(ipars)
+#  else:
+#    ncols=sqrtabove
+#    nrows=np.int32(np.ceil(len(pars)/np.float(ncols)))
 
-  pl.close(fnum)
-  fg,ax=pl.subplots(ncols=ncols,nrows=nrows,num=fnum,sharex=True\
+  if (not("num" in fkwargs)):
+    fkwargs["num"] = 1
+
+  pl.close(fkwargs["num"])
+  fg,ax=pl.subplots(ncols=ncols,nrows=nrows,sharex=True\
       ,squeeze=False, clear=True, **fkwargs)
   fax = ax.flatten()
+
   lrangex=1.e99
   urangex=-1.e99
   pltcnt = -1
@@ -925,9 +990,9 @@ def plot_profiles(profiles, pars=['all'] \
       xtoplot = np.arange(self.nw)
     elif(axis=='w'):
       xtoplot = self.wave * 1.
-    else:
-      print("axis='p' or axis='w'")
-      return
+#    else:
+#      print("axis='p' or axis='w'")
+#      return
 
     if (np.min(xtoplot)<lrangex):
       lrangex = np.min(xtoplot)
@@ -938,7 +1003,7 @@ def plot_profiles(profiles, pars=['all'] \
 
       pltcnt += 1
 
-      for cnt, itp in enumerate(pars):
+      for cnt, itp in enumerate(ipars):
 
         itdata = getattr(self, itp)
         if (show_labels):
@@ -951,48 +1016,45 @@ def plot_profiles(profiles, pars=['all'] \
               )
         del(itdata)
 
-  nylabel_dict = {}
-  nylabel_dict['stki'] = r'I/I$_{{\rm c}}$'
-  nylabel_dict['stkq'] = r'Q/I$_{{\rm c}}$'
-  nylabel_dict['stku'] = r'U/I$_{{\rm c}}$'
-  nylabel_dict['stkv'] = r'V/I$_{{\rm c}}$'
-
+  #
+  #
+  #
   ylabel_dict = {}
-  ylabel_dict['stki'] = r'I/I$_{{\rm c}}$'
-  ylabel_dict['stkq'] = r'Q/I$_{{\rm c}}$'
-  ylabel_dict['stku'] = r'U/I$_{{\rm c}}$'
-  ylabel_dict['stkv'] = r'V/I$_{{\rm c}}$'
-
-
+  #
   if (np.mean(profiles[0].stki)<5.):
-    for cnt, itp in enumerate(pars):
-      fax[cnt].set_ylabel(nylabel_dict[itp])
+    ylabel_dict['stki'] = r'I/I$_{{\rm c}}$'
+    ylabel_dict['stkq'] = r'Q/I$_{{\rm c}}$'
+    ylabel_dict['stku'] = r'U/I$_{{\rm c}}$'
+    ylabel_dict['stkv'] = r'V/I$_{{\rm c}}$'
   else:
-    for cnt, itp in enumerate(pars):
-      fax[cnt].set_ylabel(ylabel_dict[itp])
-
+    ylabel_dict['stki'] = r'I$'
+    ylabel_dict['stkq'] = r'Q$'
+    ylabel_dict['stku'] = r'U$'
+    ylabel_dict['stkv'] = r'V$'
+  for cnt, itp in enumerate(ipars):
+    fax[cnt].set_ylabel(ylabel_dict[itp])
+  #
+  #
+  #
   for itn in range(ncols-axestorem):
     if (axis == 'p'):
       ax[-1, itn].set_xlabel(r'$\lambda$ [px]')
     elif (axis == 'w'):
       ax[-1, itn].set_xlabel(r'$\lambda$ [m$\AA$]')
-  # Final layout
-  fg.tight_layout()
-
 
   for itn1 in range(ncols):
     for itn2 in range(nrows-1):
       if (itn2==nrows-2):
         if (axestorem>0):
-          if (itn1+axestorem<ncols):
-            ax[itn2, itn1].xaxis.set_ticklabels([])
-          else:
+          if (itn1+axestorem>=ncols):
             pl.delaxes(ax[itn2+1, itn1])
             if (axis == 'p'):
               ax[itn2, itn1].set_xlabel(r'$\lambda$ [px]')
             elif (axis == 'w'):
               ax[itn2, itn1].set_xlabel(r'$\lambda$ [m$\AA$]')
- 
+  #
+  #
+  #
   if (len(rangex)==2):
     lrangex=rangex[0]*1.
     urangex=rangex[1]*1.
@@ -1000,7 +1062,9 @@ def plot_profiles(profiles, pars=['all'] \
     for it_xxx in range(3):
       for it_yyy in range(3):
         ax[it_xxx, it_yyy].set_xlim(lrangex, urangex)
-
+  #
+  #
+  #
   fg.tight_layout()
   if (show_labels):
     ax[-1,-1].legend(shadow=True, fancybox=True \
@@ -1202,8 +1266,8 @@ class atm_model3D(object):
     self.full = full
 
     # For tv:
-    self.tv_defaults = {}
-    self.set_tv_defaults()
+    self.__tv_defaults = {}
+    self.__set_tv_defaults()
 
     return
   #
@@ -1310,7 +1374,7 @@ class atm_model3D(object):
   #
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   #
-  def set_tv_defaults(self):
+  def __set_tv_defaults(self):
 
     cmaps = {}
     cmaps['tem']='gist_heat'
@@ -1326,7 +1390,7 @@ class atm_model3D(object):
     cmaps['x']='viridis'
     cmaps['y']='viridis'
     cmaps['z']='viridis'
-    self.tv_defaults['cmap']=cmaps
+    self.__tv_defaults['cmap']=cmaps
 
     cscale = {}
     cscale['tem']='linear'
@@ -1342,7 +1406,7 @@ class atm_model3D(object):
     cscale['x']='linear'
     cscale['y']='linear'
     cscale['z']='linear'
-    self.tv_defaults['cscale']=cscale
+    self.__tv_defaults['cscale']=cscale
 
     factor = {}
     factor['tem']=1.e-3
@@ -1358,7 +1422,7 @@ class atm_model3D(object):
     factor['x']=1.e-3
     factor['y']=1.e-3
     factor['z']=1.e-3
-    self.tv_defaults['factor']=factor
+    self.__tv_defaults['factor']=factor
 
     symmetry = {}
     symmetry['tem']=False
@@ -1374,7 +1438,7 @@ class atm_model3D(object):
     symmetry['x']=False
     symmetry['y']=False
     symmetry['z']=False
-    self.tv_defaults['symmetry']=symmetry
+    self.__tv_defaults['symmetry']=symmetry
 
     label = {}
     label['tem']=r'T [Kk]'
@@ -1390,7 +1454,7 @@ class atm_model3D(object):
     label['x']=r'x [Mm]'
     label['y']=r'y [Mm]'
     label['z']=r'z [Mm]'
-    self.tv_defaults['label']=label
+    self.__tv_defaults['label']=label
 
     return
 
@@ -1945,10 +2009,10 @@ class atm_model3D(object):
         , squeeze=False, sharex=True, sharey=True, **fkwargs)
     for itnp, itp in enumerate(pars):
       show_col(ax[:,itnp], toshow[:,itnp,:,:] \
-          , self.tv_defaults['cmap'][itp] \
-          , self.tv_defaults['factor'][itp] \
-          , self.tv_defaults['label'][itp] \
-          , sym=self.tv_defaults['symmetry'][itp])
+          , self.__tv_defaults['cmap'][itp] \
+          , self.__tv_defaults['factor'][itp] \
+          , self.__tv_defaults['label'][itp] \
+          , sym=self.__tv_defaults['symmetry'][itp])
       # Remove some ticklabels:
       # Y:
       if (itnp==0):
@@ -2130,19 +2194,19 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
       # We go through the parameters:
       for itpn, itp in enumerate(pars):
         itcolor=plot_par(fax[itpn], it_xtoplot, getattr(self, itp)[itx[it_nnn] \
-            ,ity[it_nnn],:], self.tv_defaults['factor'][itp] \
-            , self.tv_defaults['cscale'][itp], skwargs[itn] \
+            ,ity[it_nnn],:], self.__tv_defaults['factor'][itp] \
+            , self.__tv_defaults['cscale'][itp], skwargs[itn] \
             , labels[itn])
         if (itpn == 0):
           used_colors.append(itcolor)
         if ( (it_nnn==0) & (itn==0) ):
-          fax[itpn].set_ylabel(self.tv_defaults['label'][itp])
+          fax[itpn].set_ylabel(self.__tv_defaults['label'][itp])
 
   for itn in range(ncols-axestorem):
     if (axis == 'z'):
-      ax[-1, itn].set_xlabel(models[0].tv_defaults['label']['z'])
+      ax[-1, itn].set_xlabel(models[0].__tv_defaults['label']['z'])
     elif (axis == 't'):
-      ax[-1, itn].set_xlabel(models[0].tv_defaults['label']['tau'])
+      ax[-1, itn].set_xlabel(models[0].__tv_defaults['label']['tau'])
   # Final layout
   fg.tight_layout()
 
@@ -2155,9 +2219,9 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
           else:
             pl.delaxes(ax[itn2+1, itn1])
             if (axis == 'z'):
-              ax[itn2, itn1].set_xlabel(models[0].tv_defaults['label']['z'])
+              ax[itn2, itn1].set_xlabel(models[0].__tv_defaults['label']['z'])
             elif (axis == 't'):
-              ax[itn2, itn1].set_xlabel(models[0].tv_defaults['label']['tau'])
+              ax[itn2, itn1].set_xlabel(models[0].__tv_defaults['label']['tau'])
       #  else:
       #    ax[itn2, itn1].xaxis.set_ticklabels([])
       #else:
@@ -2190,7 +2254,7 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
               it_px = self.tau[itx[it_nnn],ity[it_nnn],:] * 1.
             #
             it_py = getattr(self, pars[cnt])[itx[it_nnn],ity[it_nnn],:] \
-                * self.tv_defaults['factor'][pars[cnt]]
+                * self.__tv_defaults['factor'][pars[cnt]]
 
             ylims[:,it_xxx, it_yyy] = get_model_lims(it_px \
                 , lrangex, urangex, it_py, ylims[:,it_xxx, it_yyy])
