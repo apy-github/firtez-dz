@@ -904,8 +904,9 @@ def plot_profiles(profiles \
         [ mandatory ]
           * profiles: one or a list of stk_profile3d class elements.
         [ optional ]
-          * pars (default='all'):
-          * axis (default='p'):
+          * pars (default='all'): It can be 'all' or any combination of 'i', 'q', 'u', 'v'
+                                         standing for each of the Stokes parameter
+          * axis (default='p'): Either 'p' that stands for pixels or 'w' for wavelength
           * labels (default=None):
 
           * rangex (default='as given from profiles'): list of two elements giving the minimum
