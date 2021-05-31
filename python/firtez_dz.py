@@ -123,7 +123,7 @@ class stk_profile3D(object):
       Special method 'repr':
     """
 
-    return "\n\tFirtez-dz Stokes class."
+    return "\n\tFIRTEZ-dz Stokes class."
   #
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   #
@@ -549,6 +549,9 @@ class stk_profile3D(object):
       waves=[waves,]
 
     ipars = self.get_pars(pars)
+    if (ipars[0].lower()=='all'):
+      ipars = ['stki', 'stkq', 'stku', 'stkv']
+
 
     if ( (axis!='p') & (axis!='w') ):
       print("\tAxis must be either 'p' (pixel scale) or 'w' (wavelength scale)")
@@ -1691,15 +1694,32 @@ class atm_model3D(object):
     return
 
 
-  def re_sample(self, new_nz, step=0.\
-      , kind='linear', fill_value='extrapolate', new_zz=np.array([])):
+  def re_sample(self, new_nz=1, step=0.\
+      , new_zz=np.array([]), ikwargs={}):
+
+    """
+
+      Model atmosphere class internal method: re_sample.
+
+    """
+
+    ifkwargs = ikwargs.copy()
+    knames = ['kind', 'fill_value', ]
+    kdvals = ['linear', 'extrapolate']
+    for itkn, itkv in zip(knames,kdvals):
+      if (not (itkn in ifkwargs)):
+        ifkwargs[itkn]=itkv
 
     if (np.abs(step) > 0.1):
       #.step = (self.z[-1] - self.z[0]) / np.float32(new_nz)
-      new_nz = np.int16(np.floor((self.z[-1] - self.z[0]) / np.float32(step)))
+      new_nz = np.int32(np.floor((self.z[0,0,-1] - self.z[0,0,0]) / np.float32(step)))
 
     old_z = self.z[0, 0, :] * 1.
-    new_z = np.linspace(self.z[0,0,0], self.z[0,0,-1], new_nz)
+    try:
+      new_z = np.linspace(self.z[0,0,0], self.z[0,0,-1], new_nz)
+    except:
+      from pdb import set_trace as stop
+      stop()
 
     if (new_zz.size != 0):
       new_nz = new_zz.size
@@ -1708,46 +1728,69 @@ class atm_model3D(object):
     new_model = atm_model3D(self.nx, self.ny, new_nz)
 
     narray = np.zeros((13, self.nx, self.ny, new_nz))
-    for it_nx in range(self.nx):
-      for it_ny in range(self.ny):
 
-        f = interp1d(old_z, self.tem[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[0, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.pg[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[1, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.rho[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[2, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.bx[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[3, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.by[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[4, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.bz[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[5, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.vz[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[6, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.pel[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[7, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.mw[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[8, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.tau[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[9, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.x[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[10, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.y[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[11, it_nx, it_ny, :] = f(new_z)
-        narray[12, it_nx, it_ny, :] = new_z * 1.
+    mpars = [\
+        'tem' \
+        , 'pg' \
+        , 'rho' \
+        , 'bx' \
+        , 'by' \
+        , 'bz' \
+        , 'vz' \
+        , 'pel' \
+        , 'mw' \
+        , 'tau' \
+        , 'x' \
+        , 'y' \
+        ]
+
+    for itn, itp in enumerate(mpars):
+      f = interp1d(old_z, getattr(self, itp)\
+          , **ifkwargs, axis=2)
+      narray[itn, :, :, :] = f(new_z)
+      
+    narray[12, :, :, :] = new_z[None,None,:] * 1.
+
+#    for it_nx in range(self.nx):
+#      for it_ny in range(self.ny):
+#
+#        f = interp1d(old_z, self.tem[it_nx, it_ny, :]\
+#            , **ifkwargs, axis=2)
+#        narray[0, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.pg[it_nx, it_ny, :]\
+#            , **ifkwargs)
+#        narray[1, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.rho[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[2, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.bx[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[3, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.by[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[4, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.bz[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[5, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.vz[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[6, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.pel[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[7, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.mw[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[8, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.tau[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[9, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.x[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[10, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.y[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[11, it_nx, it_ny, :] = f(new_z)
+#        narray[12, it_nx, it_ny, :] = new_z * 1.
 
     new_model.set_atmosphere(narray)
 
