@@ -1756,8 +1756,12 @@ class atm_model3D(object):
         ]
 
     for itn, itp in enumerate(mpars):
-      f = interp1d(old_z, getattr(self, itp)\
-          , **ifkwargs, axis=2)
+      if ((itn==0)|(itn==1)|(itn==2)|(itn==7)|(itn==8)):
+        f = 10.**(interp1d(old_z, np.log10(getattr(self, itp))\
+            , **ifkwargs, axis=2))
+      else:
+        f = interp1d(old_z, getattr(self, itp)\
+            , **ifkwargs, axis=2)
       narray[itn, :, :, :] = f(new_z)
       
     narray[12, :, :, :] = new_z[None,None,:] * 1.
@@ -2093,7 +2097,7 @@ class atm_model3D(object):
 #
 # START: plot models:
 #
-def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=[] \
+def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='z', labels=[] \
     , rangex=[], zorigin=False, displaytau=True \
     , skwargs={}, pargs=(), pkargs={}, fkwargs={}):
   """
@@ -2110,7 +2114,7 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
                                          , x-y-z components of the magnetic field, LOS velocity
                                          , electron pressure, mean molecular weight, decimal logarithm
                                          , of the optical depth at 500nm, x values, y values, z values
-          * axis (default='p'): Either 'z' that stands for pixels or 't' for wavelength
+          * axis (default='z'): Either 'z' that stands for heigh (in Mm) or 't' for wavelength
           * labels (default=None): String label or list of string labels to show in the legend for 
                                          each of the model plotted
 
