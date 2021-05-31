@@ -1757,12 +1757,13 @@ class atm_model3D(object):
 
     for itn, itp in enumerate(mpars):
       if ((itn==0)|(itn==1)|(itn==2)|(itn==7)|(itn==8)):
-        f = 10.**(interp1d(old_z, np.log10(getattr(self, itp))\
-            , **ifkwargs, axis=2))
+        f = interp1d(old_z, np.log10(getattr(self, itp))\
+            , **ifkwargs, axis=2)
+        narray[itn, :, :, :] = 10.**f(new_z)
       else:
         f = interp1d(old_z, getattr(self, itp)\
             , **ifkwargs, axis=2)
-      narray[itn, :, :, :] = f(new_z)
+        narray[itn, :, :, :] = f(new_z)
       
     narray[12, :, :, :] = new_z[None,None,:] * 1.
 
