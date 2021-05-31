@@ -1694,12 +1694,23 @@ class atm_model3D(object):
     return
 
 
-  def re_sample(self, new_nz=1, step=0.\
+  def re_sample(self, new_nz=0, step=0\
       , new_zz=np.array([]), ikwargs={}):
 
     """
 
-      Model atmosphere class internal method: re_sample.
+      re_sample method for atm_model3D class
+
+        inputs:
+          [ mandatory ]
+            ( Anyone of the optionals )
+          [ optional ]
+            * new_nz (default=0): Integer scalar specifying the new number of grid points in z.
+            * step (default=0): Float scalar specifying the size in z of each grid element (in km)
+            * new_zz (default=empty array): numpy array with 
+
+            * ikwargs (default={'mode':'linear', 'fill_value':'extrapolate'}): keywords to pass to 
+              scipy.interpolate interp1d call
 
     """
 
