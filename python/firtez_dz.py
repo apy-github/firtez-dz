@@ -111,7 +111,7 @@ class stk_profile3D(object):
     self.stkv = np.zeros((self.nw, self.nx, self.ny))
     self.shape = np.shape(self.stki)
     # For tv:
-    self.__tv_defaults = {}
+    self._tv_defaults = {}
     self.__set_tv_defaults()
 
     return
@@ -123,7 +123,7 @@ class stk_profile3D(object):
       Special method 'repr':
     """
 
-    return "\n\tFirtez-dz Stokes class."
+    return "\n\tFIRTEZ-dz Stokes class."
   #
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   #
@@ -222,37 +222,37 @@ class stk_profile3D(object):
     cmaps['stkq']='RdGy'
     cmaps['stku']='RdGy'
     cmaps['stkv']='RdGy'
-    self.__tv_defaults['cmap']=cmaps
+    self._tv_defaults['cmap']=cmaps
 
     cscale = {}
     cscale['stki']='linear'
     cscale['stkq']='linear'
     cscale['stku']='linear'
     cscale['stkv']='linear'
-    self.__tv_defaults['cscale']=cscale
+    self._tv_defaults['cscale']=cscale
 
     factor = {}
     factor['stki']=1.e0
     factor['stkq']=1.e3
     factor['stku']=1.e3
     factor['stkv']=1.e3
-    self.__tv_defaults['factor']=factor
+    self._tv_defaults['factor']=factor
 
     symmetry = {}
     symmetry['stki']=False
     symmetry['stkq']=True
     symmetry['stku']=True
     symmetry['stkv']=True
-    self.__tv_defaults['symmetry']=symmetry
+    self._tv_defaults['symmetry']=symmetry
 
     label = {}
     label['stki']=[r'I/I$_{{\rm c}}$', r'I']
     label['stkq']=[r'Q/I$_{{\rm c}}$ [$\times10^{3}$]', r'Q [$\times10^{3}$]']
     label['stku']=[r'U/I$_{{\rm c}}$ [$\times10^{3}$]', r'U [$\times10^{3}$]']
     label['stkv']=[r'V/I$_{{\rm c}}$ [$\times10^{3}$]', r'V [$\times10^{3}$]']
-    self.__tv_defaults['label']=label
+    self._tv_defaults['label']=label
 
-    self.__tv_defaults['xlabel']=[r'$\lambda$ [px]', r'$\lambda-\lambda_{0}$ [m$\AA$]']
+    self._tv_defaults['xlabel']=[r'$\lambda$ [px]', r'$\lambda-\lambda_{0}$ [m$\AA$]']
 
     return
 
@@ -549,6 +549,9 @@ class stk_profile3D(object):
       waves=[waves,]
 
     ipars = self.get_pars(pars)
+    if (ipars[0].lower()=='all'):
+      ipars = ['stki', 'stkq', 'stku', 'stkv']
+
 
     if ( (axis!='p') & (axis!='w') ):
       print("\tAxis must be either 'p' (pixel scale) or 'w' (wavelength scale)")
@@ -659,10 +662,10 @@ class stk_profile3D(object):
 
     for itnp, itp in enumerate(ipars):
       show_col(ax[:,itnp], toshow[:,itnp,:,:] \
-          , self.__tv_defaults['cmap'][itp] \
-          , self.__tv_defaults['factor'][itp] \
-          , self.__tv_defaults['label'][itp][itnorm] \
-          , sym=self.__tv_defaults['symmetry'][itp])
+          , self._tv_defaults['cmap'][itp] \
+          , self._tv_defaults['factor'][itp] \
+          , self._tv_defaults['label'][itp][itnorm] \
+          , sym=self._tv_defaults['symmetry'][itp])
       # Remove some ticklabels:
       # Y:
       for itn in range(len(waves)):
@@ -858,10 +861,10 @@ def compare_tv(stokes, pars, waves, fignum=1\
 
   for itnp, itp in enumerate(pars):
     show_col(ax[:,itnp], toshow[:,itnp,:,:] \
-        , stokes[0].__tv_defaults['cmap'][itp] \
-        , stokes[0].__tv_defaults['factor'][itp] \
-        , stokes[0].__tv_defaults['label'][itp][itnorm] \
-        , sym=stokes[0].__tv_defaults['symmetry'][itp])
+        , stokes[0]._tv_defaults['cmap'][itp] \
+        , stokes[0]._tv_defaults['factor'][itp] \
+        , stokes[0]._tv_defaults['label'][itp][itnorm] \
+        , sym=stokes[0]._tv_defaults['symmetry'][itp])
     # Remove some ticklabels:
     # Y:
     if ( (len(pars)>1) & (itnp>0) ):
@@ -1270,7 +1273,7 @@ class atm_model3D(object):
     self.full = full
 
     # For tv:
-    self.__tv_defaults = {}
+    self._tv_defaults = {}
     self.__set_tv_defaults()
 
     return
@@ -1394,7 +1397,7 @@ class atm_model3D(object):
     cmaps['x']='viridis'
     cmaps['y']='viridis'
     cmaps['z']='viridis'
-    self.__tv_defaults['cmap']=cmaps
+    self._tv_defaults['cmap']=cmaps
 
     cscale = {}
     cscale['tem']='linear'
@@ -1410,7 +1413,7 @@ class atm_model3D(object):
     cscale['x']='linear'
     cscale['y']='linear'
     cscale['z']='linear'
-    self.__tv_defaults['cscale']=cscale
+    self._tv_defaults['cscale']=cscale
 
     factor = {}
     factor['tem']=1.e-3
@@ -1426,7 +1429,7 @@ class atm_model3D(object):
     factor['x']=1.e-3
     factor['y']=1.e-3
     factor['z']=1.e-3
-    self.__tv_defaults['factor']=factor
+    self._tv_defaults['factor']=factor
 
     symmetry = {}
     symmetry['tem']=False
@@ -1442,7 +1445,7 @@ class atm_model3D(object):
     symmetry['x']=False
     symmetry['y']=False
     symmetry['z']=False
-    self.__tv_defaults['symmetry']=symmetry
+    self._tv_defaults['symmetry']=symmetry
 
     label = {}
     label['tem']=r'T [Kk]'
@@ -1458,7 +1461,7 @@ class atm_model3D(object):
     label['x']=r'x [Mm]'
     label['y']=r'y [Mm]'
     label['z']=r'z [Mm]'
-    self.__tv_defaults['label']=label
+    self._tv_defaults['label']=label
 
     return
 
@@ -1691,15 +1694,43 @@ class atm_model3D(object):
     return
 
 
-  def re_sample(self, new_nz, step=0.\
-      , kind='linear', fill_value='extrapolate', new_zz=np.array([])):
+  def re_sample(self, new_nz=0, step=0\
+      , new_zz=np.array([]), ikwargs={}):
+
+    """
+
+      re_sample method for atm_model3D class
+
+        inputs:
+          [ mandatory ]
+            ( Anyone of the optionals )
+          [ optional ]
+            * new_nz (default=0): Integer scalar specifying the new number of grid points in z.
+            * step (default=0): Float scalar specifying the size in z of each grid element (in km)
+            * new_zz (default=empty array): numpy array with 
+
+            * ikwargs (default={'mode':'linear', 'fill_value':'extrapolate'}): keywords to pass to 
+              scipy.interpolate interp1d call
+
+    """
+
+    ifkwargs = ikwargs.copy()
+    knames = ['kind', 'fill_value', ]
+    kdvals = ['linear', 'extrapolate']
+    for itkn, itkv in zip(knames,kdvals):
+      if (not (itkn in ifkwargs)):
+        ifkwargs[itkn]=itkv
 
     if (np.abs(step) > 0.1):
       #.step = (self.z[-1] - self.z[0]) / np.float32(new_nz)
-      new_nz = np.int16(np.floor((self.z[-1] - self.z[0]) / np.float32(step)))
+      new_nz = np.int32(np.floor((self.z[0,0,-1] - self.z[0,0,0]) / np.float32(step)))
 
     old_z = self.z[0, 0, :] * 1.
-    new_z = np.linspace(self.z[0,0,0], self.z[0,0,-1], new_nz)
+    try:
+      new_z = np.linspace(self.z[0,0,0], self.z[0,0,-1], new_nz)
+    except:
+      from pdb import set_trace as stop
+      stop()
 
     if (new_zz.size != 0):
       new_nz = new_zz.size
@@ -1708,46 +1739,74 @@ class atm_model3D(object):
     new_model = atm_model3D(self.nx, self.ny, new_nz)
 
     narray = np.zeros((13, self.nx, self.ny, new_nz))
-    for it_nx in range(self.nx):
-      for it_ny in range(self.ny):
 
-        f = interp1d(old_z, self.tem[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[0, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.pg[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[1, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.rho[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[2, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.bx[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[3, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.by[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[4, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.bz[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[5, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.vz[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[6, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.pel[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[7, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.mw[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[8, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.tau[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[9, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.x[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[10, it_nx, it_ny, :] = f(new_z)
-        f = interp1d(old_z, self.y[it_nx, it_ny, :]\
-            , kind=kind, fill_value=fill_value)
-        narray[11, it_nx, it_ny, :] = f(new_z)
-        narray[12, it_nx, it_ny, :] = new_z * 1.
+    mpars = [\
+        'tem' \
+        , 'pg' \
+        , 'rho' \
+        , 'bx' \
+        , 'by' \
+        , 'bz' \
+        , 'vz' \
+        , 'pel' \
+        , 'mw' \
+        , 'tau' \
+        , 'x' \
+        , 'y' \
+        ]
+
+    for itn, itp in enumerate(mpars):
+      if ((itn==0)|(itn==1)|(itn==2)|(itn==7)|(itn==8)):
+        f = interp1d(old_z, np.log10(getattr(self, itp))\
+            , **ifkwargs, axis=2)
+        narray[itn, :, :, :] = 10.**f(new_z)
+      else:
+        f = interp1d(old_z, getattr(self, itp)\
+            , **ifkwargs, axis=2)
+        narray[itn, :, :, :] = f(new_z)
+      
+    narray[12, :, :, :] = new_z[None,None,:] * 1.
+
+#    for it_nx in range(self.nx):
+#      for it_ny in range(self.ny):
+#
+#        f = interp1d(old_z, self.tem[it_nx, it_ny, :]\
+#            , **ifkwargs, axis=2)
+#        narray[0, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.pg[it_nx, it_ny, :]\
+#            , **ifkwargs)
+#        narray[1, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.rho[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[2, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.bx[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[3, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.by[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[4, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.bz[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[5, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.vz[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[6, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.pel[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[7, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.mw[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[8, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.tau[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[9, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.x[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[10, it_nx, it_ny, :] = f(new_z)
+#        f = interp1d(old_z, self.y[it_nx, it_ny, :]\
+#            , kind=kind, fill_value=fill_value)
+#        narray[11, it_nx, it_ny, :] = f(new_z)
+#        narray[12, it_nx, it_ny, :] = new_z * 1.
 
     new_model.set_atmosphere(narray)
 
@@ -2013,10 +2072,10 @@ class atm_model3D(object):
         , squeeze=False, sharex=True, sharey=True, **fkwargs)
     for itnp, itp in enumerate(pars):
       show_col(ax[:,itnp], toshow[:,itnp,:,:] \
-          , self.__tv_defaults['cmap'][itp] \
-          , self.__tv_defaults['factor'][itp] \
-          , self.__tv_defaults['label'][itp] \
-          , sym=self.__tv_defaults['symmetry'][itp])
+          , self._tv_defaults['cmap'][itp] \
+          , self._tv_defaults['factor'][itp] \
+          , self._tv_defaults['label'][itp] \
+          , sym=self._tv_defaults['symmetry'][itp])
       # Remove some ticklabels:
       # Y:
       if (itnp==0):
@@ -2039,9 +2098,43 @@ class atm_model3D(object):
 #
 # START: plot models:
 #
-def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=[] \
+def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='z', labels=[] \
     , rangex=[], zorigin=False, displaytau=True \
     , skwargs={}, pargs=(), pkargs={}, fkwargs={}):
+  """
+
+    plot_models method:
+
+      inputs:
+        [ mandatory ]
+          * models: one or a list of atm_model3d class elements.
+        [ optional ]
+          * pars (default='all'): It can be 'all' or any combination of 'tem', 'pg', 'rho'
+                                         , 'bx', 'by', 'bz', 'vz', 'pel', 'mw', 'tau', 'x', 'y', 'z'
+                                         standing for temperature, gas pressure, gas density
+                                         , x-y-z components of the magnetic field, LOS velocity
+                                         , electron pressure, mean molecular weight, decimal logarithm
+                                         , of the optical depth at 500nm, x values, y values, z values
+          * axis (default='z'): Either 'z' that stands for heigh (in Mm) or 't' for wavelength
+          * labels (default=None): String label or list of string labels to show in the legend for 
+                                         each of the model plotted
+
+          * rangex (default='as given from models'): list of two elements giving the minimum
+                                         and maximum limits for the plot x-axis
+
+          * fkwargs (default={'num':1}): dictionary with the keywords to pass to matplotlib.pyplot
+                                         subplots call avoiding ncols, nrows, sharex, squeeze
+                                         , clear, and sharey
+                     example:
+                          fkwargs = {"num":1,"figsize":(5,7)}
+          * pkwargs (default='default matplotlib.pyplot kwargs'): one or a list of dictionaries with
+                                         the (matplotlib.pyplot plot standard) keywords to pass to
+                                         matplotlib.pyplot plot call.
+                                         Length of the list: 1 or the same as the supplied profiles
+                                         (mandatory argument) length
+
+  """
+
 
   # Define some functions for this particular function:
 
@@ -2176,8 +2269,10 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
       xtoplot = self.z * 1.e-3
     elif(axis=='t'):
       xtoplot = self.tau * 1.
+    elif(axis=='p'):
+      xtoplot = np.arange(self.nz)
     else:
-      print("axis='z' or axis='t'")
+      print("axis='z' or axis='t' or axis='p'")
       return
 
     if (np.min(xtoplot)<lrangex):
@@ -2198,19 +2293,19 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
       # We go through the parameters:
       for itpn, itp in enumerate(pars):
         itcolor=plot_par(fax[itpn], it_xtoplot, getattr(self, itp)[itx[it_nnn] \
-            ,ity[it_nnn],:], self.__tv_defaults['factor'][itp] \
-            , self.__tv_defaults['cscale'][itp], skwargs[itn] \
+            ,ity[it_nnn],:], self._tv_defaults['factor'][itp] \
+            , self._tv_defaults['cscale'][itp], skwargs[itn] \
             , labels[itn])
         if (itpn == 0):
           used_colors.append(itcolor)
         if ( (it_nnn==0) & (itn==0) ):
-          fax[itpn].set_ylabel(self.__tv_defaults['label'][itp])
+          fax[itpn].set_ylabel(self._tv_defaults['label'][itp])
 
   for itn in range(ncols-axestorem):
     if (axis == 'z'):
-      ax[-1, itn].set_xlabel(models[0].__tv_defaults['label']['z'])
+      ax[-1, itn].set_xlabel(models[0]._tv_defaults['label']['z'])
     elif (axis == 't'):
-      ax[-1, itn].set_xlabel(models[0].__tv_defaults['label']['tau'])
+      ax[-1, itn].set_xlabel(models[0]._tv_defaults['label']['tau'])
   # Final layout
   fg.tight_layout()
 
@@ -2223,9 +2318,9 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
           else:
             pl.delaxes(ax[itn2+1, itn1])
             if (axis == 'z'):
-              ax[itn2, itn1].set_xlabel(models[0].__tv_defaults['label']['z'])
+              ax[itn2, itn1].set_xlabel(models[0]._tv_defaults['label']['z'])
             elif (axis == 't'):
-              ax[itn2, itn1].set_xlabel(models[0].__tv_defaults['label']['tau'])
+              ax[itn2, itn1].set_xlabel(models[0]._tv_defaults['label']['tau'])
       #  else:
       #    ax[itn2, itn1].xaxis.set_ticklabels([])
       #else:
@@ -2258,7 +2353,7 @@ def plot_models(models, pars=['all'],fnum=1,itx=[0,],ity=[0,], axis='t', labels=
               it_px = self.tau[itx[it_nnn],ity[it_nnn],:] * 1.
             #
             it_py = getattr(self, pars[cnt])[itx[it_nnn],ity[it_nnn],:] \
-                * self.__tv_defaults['factor'][pars[cnt]]
+                * self._tv_defaults['factor'][pars[cnt]]
 
             ylims[:,it_xxx, it_yyy] = get_model_lims(it_px \
                 , lrangex, urangex, it_py, ylims[:,it_xxx, it_yyy])
