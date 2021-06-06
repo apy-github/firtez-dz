@@ -1,173 +1,250 @@
 %
 \label{sect:execution}
 %
-%%%% TMP:% General outline:
-%%%% TMP:The execution of the FIRTEZ-dz code is performed as:\\
-%%%% TMP:
-%%%% TMP:\$ {\it mpirun -n \# ./firtez-dz.x control\_file.dat}\\
-%%%% TMP:
-%%%% TMP:Where {\it \#} must be substituted for whatever number of threads you want to run. Currently, FIRTEZ-dz has been tested in clusters with up to 1000 nodes without issues.\\
-%%%% TMP:
-%%%% TMP:For remote jobs with long execution times we recommend to run FIRTEZ-dz as:\\
-%%%% TMP:
-%%%% TMP:\$ {\it nohup mpirun -n \# ./firtez-dz.x control\_file.dat \&}\\
-%%%% TMP:
-%%%% TMP:This way the job will not stop should your internet connection drop.\\
-%%%% TMP:
-%%%% TMP:While FIRTEZ-dz is running, it also produces a lot of standard output on the console. Some of this output includes error messages and how to solve them. Therefore we do not recommend to run in silent mode ( {\it $>>$ /dev/null}). Then again, for remote jobs this might be your only option if the connection is intermitted. In this case, if you still want to run have a log file (i.e. {\it output.log}) to see what could have gone wrong, we recommend to run the job as:\\
-%%%% TMP:
-%%%% TMP:\$ {\it nohup mpirun -n \# ./firtez-dz.x control\_file.dat | tee output.log \&}\\
-%%%% TMP:
-%%%% TMP:When executing the FIRTE-DZ code, besides the executable itself ({\it firtez-dz.x}), we will need access to two additional files: the input/control file and the spectral line database file. The input/control file is commonly named {\it control\_file.dat} but you can choose to rename it as long as you provide the new name in the execution line above. The spectral line database file must always be named as {\it lines\_database.dat} as this is hardcoded inside FIRTEZ-dz. However, you can modify this file (see below) to add/remove spectral lines.
-%%%% TMP:
-%%%% TMP:
-%%%% TMP:
+% General outline:
+The execution of the FIRTEZ-dz code is performed as:\\
 
-{\it The code is able to perform different task for which, there are two mandatory files in addition to the executable itself: the input file and the spectral line database file.}
+\$ {\it mpirun -n \# ./firtez-dz.x control\_file.dat}\\
+
+Where {\it \#} must be substituted for whatever number of processes you want to run. Currently, FIRTEZ-dz has been tested in clusters with up to 1000 nodes without issues.\\
+
+For remote jobs with long execution times we recommend to run FIRTEZ-dz as:\\
+
+\$ {\it nohup mpirun -n \# ./firtez-dz.x control\_file.dat \&}\\
+
+This way the job will not stop should your internet connection drop.\\
+
+While FIRTEZ-dz is running, it also produces a lot of standard output on the console. Some of this output includes error messages and how to solve them. Therefore we do not recommend to run in silent mode ( {\it $>>$ /dev/null}). Then again, for remote jobs this might be your only option if the connection is intermitted. In this case, if you still want to run have a log file (i.e. {\it output.log}) to see what could have gone wrong, we recommend to run the job as:\\
+
+\$ {\it nohup mpirun -n \# ./firtez-dz.x control\_file.dat | tee output.log \&}\\
+
+When executing the FIRTE-DZ code, besides the executable itself ({\it firtez-dz.x}), we will need access to two additional files: the input/control file and the spectral line database file. The input/control file is commonly named {\it control\_file.dat} but you can choose to rename it as long as you provide the new name in the execution line above. The spectral line database file must always be named as {\it lines\_database.dat} as this is hardcoded inside FIRTEZ-dz. However, you can modify this file (see below) to add/remove spectral lines.
+
 %
 % Input file:
-\subsection{Input file:}
-It is a plain text file in which there are some mandatory fields and some optional ones. Each field is defined starting with its name (in capital letters) followed by colon and ends whenever another field starts or the end is reached, which is denoted with: {\it END:}. An example is provided after explaining each of the possible fields.\\
+\subsection{Input/Control file:}
+It is a plain text file. It contains a number of {\bf fields}, some of which are mandatory while others are optional (we will let you know later). Each field is defined starting with its name (in capital letters) followed by colon {\it :} and ends whenever another field starts. Anything written after {\it END:} is ignored. An example is provided after explaining each of the possible fields.\\
 
-The following list covers ALL the fields the code works with, anything outside is omitted. The order with which the various {\it fields} appear does not matter.\\
+The following list covers ALL the fields the code works with, anything outside is omitted. The order with which the various {\bf fields} appear does not matter.\\
+
 \begin{itemize}
+
   \item {\it LINES:} {\bf Mandatory}\\
-  It specifies the line/lines from the ones provided in the spectral lines database file (see Sec. \ref{sec:spectral_line_database}). It might contain as many spectral regions as desired and the format to supply them is as follows:\\
-  index  nnn   init    ddd\\
+It specifies the line/lines from the ones provided in the spectral lines database file (see Sec. \ref{sec:spectral_line_database}). It might contain as many spectral regions as desired. The format to supply them is as follows:\\
+
+  {\it index  nnn   init    ddd}\\
+
   where the various parameters are:
   \begin{itemize}
+
     \item {\it index} refers to the spectral line index or indexes of the spectral line database to be synthesised together. If one is supplied the RTE is solved for that line. If several indexes (separated by comma) are supplied, then the RTE is solved for the whole set simultaneously.
+
     \item {\it nnn} (integer) specifies the number of spectral points to be solved.
+
     \item {\it init} (float) specifies the difference with respect to the reference wavelength set in the spectral line database (in m{\AA}) of the first wavelength point to consider. For the case of blended spectral regions, the reference wavelength is the one appearing in the spectral line database for the very first of the spectral lines specified.
+
     \item {\it ddd} (float) is the wavelength step in between each wavelength point in m{\AA}.
+
   \end{itemize}
   An example of such field would be as follows:\\
 \begin{ifbox}[label={tb:lines}]{{\it Lines}}
   \scriptsize
   \ldots\\
   LINES:\\
-  4 10 -123.45 6.7\\
-  4,5 15 -234.56 7.8\\
-  9 25 -3456.78 90.1\\
-  END:\\
+  2 11 -100.0 20.0\\
+  4,5 71 -200.0 40.0\\
   \ldots
   \normalsize
 \end{ifbox}
-  In the first line, we specify that the spectral line identified with index {\it 4} in the spectral line database file is sampled in {\it 10} spectral points starting from {\it 123.45} m{\AA} of the line core (value specified in the spectral line database file) with a spectral sample of {\it 6.7} m{\AA}.
-  In the second line, we also use the same spectral line as before ({\it 4} in the spectral line database file) but now, it is blended with another spectral line ({\it 5} in the spectral line database file). This spectral region is sampled at {\it 15} spectral points starting from {\it -234.56} m{\AA} of the line core of the first index ({\it 4}) (specified in the spectral line database file) with a spectral sample of {\it 7.8} m{\AA}.
-  Finally, we consider a third spectral line ({\it 9} in the spectral line database file) which is sampled in 25 wavelength points starting from {\it -3456.78} of the core of line {\it 9} and equally spaced by {\it 90.1}.\\
+
+  In the first line, we specify that the Stokes vector corresponding to the spectral line identified with index {\it $2$} in {\it lines\_database.dat} is to be calculated in {\it $11$} spectral points, starting from {\it $-200.0$} m{\AA} of the line core with a spectral sampling of {\it 20.0} m{\AA}. If we now look into {\it lines\_database.dat} we see that FIRTEZ-dz will then calculate the Stokes vector for Fe I 6173.3354 {\AA} at positions: $6173.2354,6173.2554, ... , 6173.3354, ..., 6173.4154, 6173.4354$ {\AA}.\\
+  %In the first line, we specify that the spectral line identified with index {\it 4} in the spectral line database file is sampled in {\it 10} spectral points starting from {\it 123.45} m{\AA} of the line core (value specified in the spectral line database file) with a spectral sample of {\it 6.7} m{\AA}.
+
+  In the second line, we use spectral line {\it $4$} in {\it lines\_database.dat}. Note that now, this line is followed by a comma plus an additional number. This indicates that spectral line {\it $5$} in {\it lines\_database.dat} is to be computed along with {\it $4$} while considering them as being blended. This spectral region is sampled at {\it $71$} spectral points starting from {\it $-200.0$} m{\AA} of the line core of the first (index {\it $4$}) with a spectral sampling of {\it $40.0$} m{\AA}. Therefore, FIRTEZ-dz will calculate the Stokes vector for Fe I 6301.5010 {\AA} and Fe I 6302.4937 {\AA} at positions: $6301.3010, 6301.3210, 6301.3410, ..., 6301.5010, 6301.5210, ..., 6302.9010, 6302.9210$ {\AA}. Note that the final wavelengths are well past (i.e. on the red wing) of the second spectral line.\\
+  %In the second line, we also use the same spectral line as before ({\it 4} in the spectral line database file) but now, it is blended with another spectral line ({\it 5} in the spectral line database file). This spectral region is sampled at {\it 15} spectral points starting from {\it -234.56} m{\AA} of the line core of the first index ({\it 4}) (specified in the spectral line database file) with a spectral sample of {\it 7.8} m{\AA}.
+
+  %Finally, we consider a third spectral line ({\it 9} in the spectral line database file) which is sampled in 25 wavelength points starting from {\it -3456.78} of the core of line {\it 9} and equally spaced by {\it 90.1}.\\
+
   \item {\it BOX:} {\bf Optional}\\
+
   This field specifies the spatial dimension of the considered atmosphere to be handled. It has three mandatory lines that refer, respectively, to the {\it x}, {\it y}, and {\it z} spatial dimension and the three of them follow the same format:\\
-  nn   dd\\
+
+  {\it nn   dd}\\
+
   where {\it nn} is the number of points (integer) in each dimension and {\it dd } is the step (real number, in km) sampling along each spatial direction. As an example, let us consider the following piece of input file:\\
+
 \begin{ifbox}[label={tb:box}]{{\it Box}}
   \scriptsize
   \ldots\\
-  BOX:\\
-  2  9.01\\
-  23  78.9\\
-  512  1.234\\
-  FILEMODEL:\\
+  {\it BOX:}\\
+  256 48.0\\
+  256 48.0\\
+  128 12.0\\
   \ldots
   \normalsize
 \end{ifbox}
-  Here we would be considering a piece of atmosphere extended 2 spatial grid points in {\it x} dimension at a distance of {\it 9.01} km from each other, {\it 23 } spatial points in the {\it y} direction sampled every {\it 78.9} km, and finally, covering {\it 512} km in {\it z} direction every {\it 1.234} km. Notice here that in contrast to the previous piece of example, this field section ends as another field ({\it FILEMODEL:}) begins, i.e., not every field must end with {\it END:}.\\
-  \item {\it FILEPROFILE:} {\bf Mandatory in {\it INVERSION} and {\it SYNTHESIS} mode, otherwise Inactive}\\
-  It is a string containing the name of the file where spectral profiles are to be written. It is an optional field BUT it is mandatory for the synthesis and inversion modes. For example, if we would like to store the synthetic profiles for a supplied atmosphere in a file named {\it synthetic\_profile.bin}, we would write the following:\\
-\begin{ifbox}[label={tb:box}]{{\it Box}}
+
+  The example above considers a three dimensional domain driscretized in {\it $256$}, {\it $256$}, and {\it $128$} grid points along the {\it x}, {\it y}, and {\it z} dimensions, respectively. The last dimension, {\it z} {\bf is always considered the direction of the gravity vector}. The grid sizes are {\it $48$} km along {\it x} and {\it y}, but {\it $12$} km along {\it z}.\\
+
+  \item {\it FILEPROFILE:} {\bf Mandatory} if {\it MODE:} {\it INVERSION} or {\it MODE:} {\it SYNTHESIS} mode, otherwise {\bf Inactive}\\
+  
+  It is a string containing the name of the file where Stokes vector is to be written. It is an optional field BUT it is mandatory for the synthesis and inversion modes. For example, if we would like to store the synthetic profiles for a supplied atmosphere in a file named {\it synthetic\_profile.bin}, we would write the following:\\
+ 
+
+\begin{ifbox}[label={tb:box}]{{\it Fileprofile}}
   \scriptsize
   \ldots\\
-  BOX:\\
+  {\it FILEPROFILE:}\\
   synthetic\_profile.bin\\
-  FILEMODEL:\\
   \ldots
   \normalsize
 \end{ifbox}
+
   \item {\it FILEMODEL:} {\bf Mandatory}\\
-  This field is also a string containing the name of the model atmosphere to deal with. It is a MANDATORY field. For example, if our atmosphere is in {it model\_atmosphere.bin}, then we would have:\\
+  
+  This field is also a string containing the name of the model atmosphere to deal with. It is a MANDATORY field. For example, if our atmosphere is in {\it model\_atmosphere.bin}, then we would have:\\
+%  \item {\it FILEMODEL:} {\bf Mandatory}\\
+%  This field is also a string containing the name of the model atmosphere to deal with. It is a MANDATORY field. For example, if our atmosphere is in {it model\_atmosphere.bin}, then we would have:\\
+
 \begin{ifbox}[label={tb:box}]{{\it Box}}
   \scriptsize
   \ldots\\
-  BOX:\\
+  {\it FILEMODEL:}\\
   model\_atmosphere.bin\\
-  MODE:\\
   \ldots
   \normalsize
 \end{ifbox}
+  
+
   \item {\it HYDROSTATIC:} {\bf Optional (default: {\it NO})}\\
-  It is not a mandatory field and it can be {\it YES} or {\it NO}. If not specified, default is {\it NO}. If {\it YES}, the atmosphere is assumed in hydrostatic equilibrium, which means that, provided a boundary condition, it proceeds with the integration of the pressure using a Runge-Kutta 4 obtaining the gas pressure and density stratifications under hydrostatic equilibrium. If {\it NO}, then it takes the supplied gas pressures and densities to proceed with the resolution of the radiative transfer equation\footnote{Notice that either gas pressure or density are modified so that the equation of state is fulfilled at every height.}. For example, if we want to assume hydrostatic equilibrium, we would have the following:\\
+  
+  This is an optional field. If present it can be {\it YES} or {\it NO}. If not present, default is {\it NO}. If {\it YES}, the atmosphere is assumed to be in hydrostatic equilibrium. In this case, FIRTEZ-dz will take the uppermost value of the pressure in the atmospheric model, $P_{\rm g}(z_{\rm max}))$, under {\it FILEMODEL} as a boundary condition, and then it integrate downwards the eqution of hydrosatic equilibrium, using a Runge-Kutta 4, to obtain the gas pressure and density at all other atmospheric heights. If {\it NO} or not present, it takes the supplied gas pressures and densities to proceed with the resolution of the radiative transfer equation\footnote{Notice that either gas pressure or density are modified so that the equation of state is fulfilled at every height.}. For example, if we want to assume hydrostatic equilibrium, we would have the following:\\
+
+  %\item {\it HYDROSTATIC:} {\bf Optional (default: {\it NO})}\\
+  %It is not a mandatory field and it can be {\it YES} or {\it NO}. If not specified, default is {\it NO}. If {\it YES}, the atmosphere is assumed in hydrostatic equilibrium, which means that, provided a boundary condition, it proceeds with the integration of the pressure using a Runge-Kutta 4 obtaining the gas pressure and density stratifications under hydrostatic equilibrium. If {\it NO}, then it takes the supplied gas pressures and densities to proceed with the resolution of the radiative transfer equation\footnote{Notice that either gas pressure or density are modified so that the equation of state is fulfilled at every height.}. For example, if we want to assume hydrostatic equilibrium, we would have the following:\\
 \begin{ifbox}[label={tb:hydrostatic}]{{\it Hydrostatic}}
   \scriptsize
   \ldots\\
-  HYDROSTATIC:\\
+  {\it HYDROSTATIC:}\\
   YES\\
-  MODE:\\
   \ldots
   \normalsize
 \end{ifbox}
+
   \item {\it MODE:} {\bf Mandatory}\\
+
   This input tells the code what has to be done. There are currently 4 possibilities:
+
   \begin{itemize}
     \item {\it SYNTHESIS}\\
     It uses the model atmosphere supplied to solve the radiative transfer equation and get the synthetic Stokes spectra. In this mode, {\it FILEPROFILE:} is mandatory.
+
     \item {\it INVERSION}\\
     It uses the model atmosphere supplied and the profiles supplied to retrieve the model atmosphere that best fits the provided Stokes spectra. In this mode, {\it FILEPROFILE:} and {\it INVERSION SETUP:} are mandatory.
+
     \item {\it TAU}\\
-    It uses the provided model atmosphere to estimate the $\lg\tau_{5}$ scale.
+    It uses the provided model atmosphere ({\it FILEMODEL:}) to estimate the $\lg\tau_{5}$ scale (optical depth) from the supplied temperature and gas pressure or density. Under this mode FIRTEZ-dz does not solve the radiative transfer equation, therefore no Stokes vector under {\it FILEPROFILE:} is needed.
+    %It uses the provided model atmosphere to estimate the $\lg\tau_{5}$ scale.
+
     \item {\it HYDROSTATIC}\\
-    It uses the provided temperature and gas pressure boundary condition to solve hydrostatic equilibrium equation. It requires that {\it HYDROSTATIC:} field is {\it YES}.
+    Under this mode, FIRTEZ-dz takes the value of the gas pressure at the uppermost $z$-slab, $P_{\rm g}(z_{\rm max})$, of the provided atmosphere  ({\it FILEMODEL:}) and uses it as a boundary condition to determine the gas pressure elsewhere by solving downwards the equation of hydrostatic equilibrium. It requires that {\it HYDROSTATIC:} field is {\it YES}. Under this mode FIRTEZ-dz does not solve the radiative transfer equation, therefore no Stokes vector under {\it FILEPROFILE:} is needed.
+    %It uses the provided temperature and gas pressure boundary condition to solve hydrostatic equilibrium equation. It requires that {\it HYDROSTATIC:} field is {\it YES}.
+
   \end{itemize}
   \item {\it STOKES SETUP:} {\bf Optional (default: all active)}\\
-  Optional field that specifies Stokes parameters to be considered. 
-  It is useless except for {\it SYNTHESIS} and {\it INVERSION} mode. It specifies the Stokes parameters to be synthesis/inverted and/or the weights (only for {\it INVERSION}) with which one would like to perform the inversion. There might appear up to 4 lines inside this field with any/all of the following: {\it STKI}, {\it STKQ}, {\it STKU}, and/or {\it STKV}. By default all of them are synthesised/inverted and for the inversion, by default weights are set to 1. For example, if one wants to synthesis Stokes I and V for a given model atmosphere, then {\it STOKES SETUP:} field should appear as follows:\\
+
+  It is useless except for {\it MODE:} {\it SYNTHESIS} or {\it MODE:} {\it INVERSION}. It specifies the Stokes parameters to be synthesis/inverted and, if {\it MODE:}{\it INVERSION}, also specifies the inversion weights. The {\it STOKES SETUP:} field can include up to 4 lines, with any/all of the following: {\it STKI}, {\it STKQ}, {\it STKU}, and/or {\it STKV}. By default all of them are synthesised/inverted and, if {\it MODE:}{\it INVERSION}, the default weights are set to 1. For example, if one wants to synthesis Stokes $I$ and $V$ for a given model atmosphere, then {\it STOKES SETUP:} field should appear as follows:\\
+%  Optional field that specifies Stokes parameters to be considered. 
+%  It is useless except for {\it SYNTHESIS} and {\it INVERSION} mode. It specifies the Stokes parameters to be synthesis/inverted and/or the weights (only for {\it INVERSION}) with which one would like to perform the inversion. There might appear up to 4 lines inside this field with any/all of the following: {\it STKI}, {\it STKQ}, {\it STKU}, and/or {\it STKV}. By default all of them are synthesised/inverted and for the inversion, by default weights are set to 1. For example, if one wants to synthesis Stokes I and V for a given model atmosphere, then {\it STOKES SETUP:} field should appear as follows:\\
 \begin{ifbox}[label={tb:stokes_setup1}]{{\it Stokes setup (1)}}
   \scriptsize
   \ldots\\
-  STOKES SETUP:\\
+  {\it MODE:}\\
+  SYNTHESIS\\
+  {\it STOKES SETUP:}\\
   STKI\\
   STKV\\
-  MODE:\\
   \ldots
   \normalsize
 \end{ifbox}
-  And if for instance, what we want is to invert all the Stokes parameters we might not include this field at all. If we want to set different weights for each Stokes parameter though, we must include this field as follows:\\
+  
+And if for instance, what we want is to invert all the Stokes parameters with weights {\it 1.0}, {\it 1.0}, {\it 2.0}, {\it 2.0} for Stokes $I$, $V$, $Q$, and $U$, respectively we would write:\\
+
+%  And if for instance, what we want is to invert all the Stokes parameters we might not include this field at all. If we want to set different weights for each Stokes parameter though, we must include this field as follows:\\
 \begin{ifbox}[label={tb:stokes_setup2}]{{\it Stokes setup (2)}}
   \scriptsize
   \ldots\\
-  STOKES SETUP:\\
-  STKI\\
-  STKV  2.4\\
-  STKQ  4.2\\
-  STKU  5.9\\
-  MODE:\\
+  {\it MODE:}\\
+  INVERSION\\
+  {\it STOKES SETUP:}\\
+  STKI  1.0\\
+  STKV  1.0\\
+  STKQ  2.0\\
+  STKU  2.0\\
   \ldots
   \normalsize
 \end{ifbox}
-  where we would be setting the weight of Stokes I to 1 (default value), of Stokes Q to {\it 4.2}, {\it 5.9} for Stokes U, and {\it 2.4} for Stokes V. Notice here that weights appear quadratically in the definition of $\chi^2$:
+
+where the values {\it 1.0} for {\it STKI} and {\it STKV} can be omitted because they are the default values. We note that weights appear quadratically in the definition of $\chi^2$:
+  %where we would be setting the weight of Stokes I to 1 (default value), of Stokes Q to {\it 4.2}, {\it 5.9} for Stokes U, and {\it 2.4} for Stokes V. Notice here that weights appear quadratically in the definition of $\chi^2$:
+
   \begin{equation}
   \chi^2\propto\sum_{I,Q,U,V}\frac{\sum_{\lambda}(O_{\lambda}-I^{syn}_{\lambda})^2*w_{I,Q,U,V}^2}{\sigma_{I,Q,U,V}^2}
   \end{equation}
-  \item {\it INVERSION SETUP:} {\bf Mandatory in {\it INVERSION} mode, otherwise Inactive}\\
+
+%% To be implemented:The values of the weights in the example above (Ex.~\ref{tb:stokes_setup2}) will be applied to all wavelengths equally. In some applications it is desirable to give different weights to different wavelength posistions. For instance, to avoid including
+%% To be implemented:the core of some lines formed under strong NLTE coditions, or to avoid telluric blends, etc. In this case, instead of a numeric value we can provided a filaname where those weights will be specified:
+%% To be implemented:
+%% To be implemented:\begin{ifbox}[label={tb:stokes_setup3}]{{\it Stokes setup (3)}}
+%% To be implemented:  \scriptsize
+%% To be implemented:  \ldots\\
+%% To be implemented:  {\it MODE:}\\
+%% To be implemented:  INVERSION\\
+%% To be implemented:  {\it STOKES SETUP:}\\
+%% To be implemented:  STKI  wi.txt\\
+%% To be implemented:  STKV  1.0\\
+%% To be implemented:  STKQ  2.0\\
+%% To be implemented:  STKU  2.0\\
+%% To be implemented:  \ldots
+%% To be implemented:  \normalsize
+%% To be implemented:\end{ifbox}
+%% To be implemented:
+%% To be implemented:In the example above, {\it wi.txt} would be a plain ascii file with as many entries as observed wavelengths as in {\it LINES}. Each entry would consist of a nuemric value correponding to the weight for that particular wavelength position:\\
+%% To be implemented:
+%% To be implemented:\$~{\it cat wi.txt}\\
+%% To be implemented:1.0\\
+%% To be implemented:0.0\\
+%% To be implemented:0.0\\
+%% To be implemented:1.0\\
+%% To be implemented:1.0\\
+%% To be implemented:1.0\\
+%% To be implemented:...\\
+%% To be implemented:
+%% To be implemented:Here the Stokes $I$ at the second and third wavelength positions will be given a weight of {\it 0.0}, whereas the rest of the wavelengths are given {\it 1.0}. Similar files can be provided for the other Stokes parameters ($Q$, $U$, $V$). These files (if any) should
+%% To be implemented:be located in the directory {\it DATAPATH:} under {\it MISC SETUP:}\\
+
+  \item {\it INVERSION SETUP:} {\bf Mandatory} if {\it MODE:} {\it INVERSION}, otherwise {\bf Inactive}\\
+
   This field is mandatory for {\it INVERSION} mode. It can take any or almost all of the combinations between: {\it TEM}, {\it P0}, {\it PGAS}, {\it RHO}, {\it BX}, {\it BY}, {\it BZ}, and/or {\it VLOS}. It is NOT possible to set {\it TEM}, {\it PGAS}, and {\it RHO} at the same time since it might lead to combination of thermodynamical parameters that do not fulfil the equation of state. It is also not possible to invert at the same time {\it P0} with {\it PGAS} or {\it RHO}, since the former requires of assuming hydrostatic equilibrium. If {\it P0} is active with {\it PGAS}, {\it RHO}, or both, execution will stop. If {\it P0} is active and {\it HYDROSTATIC} is {\it NO} the code will stop execution. For the inversion, by default, the code will assume that one wants to invert all the available slabs. It is possible to limit the number of perturbations to be calculated by physical parameter by adding an accompanying number to each physical parameter.\\
-%  {\it POW} 2\\
-%  {\it MAXITER} 2\\
+
   For example, let say we want to invert the temperature, the three magnetic field components and line-of-sight velocity for a given profile. But, we want to let all the temperatures slabs as free parameters, only perturb each of the three magnetic field components at two points and the line-of-sight velocity at five points, then we should supply the following {\it INVERSION SETUP} field: \\
 \begin{ifbox}[label={tb:inversion_setup}]{{\it Inversion setup}}
   \scriptsize
   \ldots\\
-  INVERSION SETUP:\\
+  {\it INVERSION SETUP:}\\
   TEM\\
   BX   2\\
   BY   2\\
   BZ   2\\
   VLOS  5\\
-  END:\\
   \ldots
   \normalsize
 \end{ifbox}
   Also it is possible to use {\it INVERSION SETUP:} field with {\it SYNTHESIS} mode when one wants to write down the response functions for a model atmosphere. For this only case, it is possible to set at the same time all of the following options: {\it TEM}, {\it PGAS}, {\it RHO}, {\it BX}, {\it BY}, {\it BZ}, and/or {\it VLOS}.\\
   \item {\it CONTINUUM NORMALIZATION:} {\bf Optional (default: active)}\\
   Optional field, useful for {\it SYNTHESIS} and {\it INVERSION} modes. Specifies whether continuum normalization to HSRA at disk center must be set or not. Default is {\it TRUE}. To disable it, one may use:\\
+%  {\it POW} 2\\
+%  {\it MAXITER} 2\\
 \begin{ifbox}[label={tb:continuum_normalization}]{{\it Continuum normalization}}
   \scriptsize
   \ldots\\

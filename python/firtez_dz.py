@@ -892,7 +892,7 @@ def compare_tv(stokes, pars, waves, fignum=1\
 
 def plot_profiles(profiles \
     , pars=['all'], axis='p', labels=[] \
-    , rangex=[], rangey=[] \
+    , rangex=[], rangey={} \
     , itx=[0,], ity=[0,] \
     , fkwargs={} \
     , pkwargs={}):
