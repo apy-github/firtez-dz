@@ -140,7 +140,7 @@ MODULE INPUT_FILE
     USE CODE_MODES, ONLY: INPUTFILE, DATAPATH, OUTPPATH, LINEPATH &
         , MODLPATH, MVERBOSE, MPROGRES, SOLVER_METHOD, NODE_EXPANSION
     !
-    INTEGER, INTENT(IN)              :: START_LINE
+    INTEGER, INTENT(INOUT)           :: START_LINE
     CHARACTER*800                    :: LINE
     INTEGER                          :: J
     LOGICAL                          :: CONDIT
@@ -152,29 +152,28 @@ MODULE INPUT_FILE
     LOGICAL                          :: EXISTS
     !
     CONDIT=.TRUE.
-    CNT=START_LINE+1
-    !
-    DO WHILE (CNT.LE.INPUT_READ_NUMBER)
-      !
+    DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
+
+      START_LINE=START_LINE+1
+      LINE=INPUT_READ_LINES(START_LINE)
+
+      ! Check if the section has finished:
+      DO J=1,LEN(LINE)
+        IF (LINE(J:J).EQ.':') THEN
+          CONDIT=.FALSE.
+          START_LINE=START_LINE-1
+          EXIT
+        ENDIF
+      ENDDO
+
+      IF (CONDIT.EQV..FALSE.) EXIT
+
       DUMIP=0
       DUMSP=0.0
       !
       DUMSVDL=.FALSE.
       DUMSIGL=.FALSE.
       DUMVERB=.FALSE.
-      !
-      LINE=INPUT_READ_LINES(CNT)
-      !
-      ! Check if the section has finished:
-      !
-      DO J=1,800
-        IF (LINE(J:J).EQ.':') THEN
-          CONDIT=.FALSE.
-          EXIT
-        ENDIF
-      ENDDO
-      !
-      CNT=CNT+1
       !
       CALL SPLIT_READ_LINE_WEIGHTS(LINE, 'TEMP', 0, ASSIST_T, DUMSP, DUMIP)
       CALL SPLIT_READ_LINE_WEIGHTS(LINE, 'PGAS', 0, ASSIST_P, DUMSP, DUMIP)
@@ -1560,7 +1559,6 @@ ENDIF
     USE CODE_MODES, ONLY: COUPLED, INPUTFILE
     !
     INTEGER, INTENT(INOUT)           :: START_LINE
-    INTEGER                          :: NUM_LINES_OBS
     INTEGER                          :: IERR
     INTEGER                          :: I, J
     INTEGER                          :: NUMC
@@ -1577,7 +1575,6 @@ ENDIF
     COU_PSFRAD=3
     !
     !
-    NUM_LINES_OBS=0
     CONDIT=.TRUE.
     ISFILENAME=.FALSE.
     COU_PSFFNAME=""
@@ -1597,8 +1594,6 @@ ENDIF
       ENDDO
       !
       IF (CONDIT.EQV..FALSE.) EXIT
-      !
-      NUM_LINES_OBS=NUM_LINES_OBS+1
       !
       NUMC=NCOLUMNS(LINE)
       IF (NUMC.EQ.1) THEN
@@ -2019,7 +2014,8 @@ ENDIF
     REG_TYPE_FREEV(:)=1
     !
   END SUBROUTINE FREE_VAR_SPACE
-   SUBROUTINE NSET_NLTE(START_LINE)
+
+  SUBROUTINE NSET_NLTE(START_LINE)
     USE FORWARD_PARAM, ONLY: NUML, BLENDSID, BLENDSMAX, POP_FILE, IND_LINE &
          , LINE_NUM, POPL, POPU, IND_FOUND
     USE CODE_MODES, ONLY: INPUTFILE, MVERBOSE, DATAPATH

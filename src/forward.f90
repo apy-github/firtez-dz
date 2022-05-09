@@ -447,7 +447,6 @@ call keep_workers_waiting()
           ARR => TAU3D5
        ENDSELECT
        !MODEL1D_SND(:,K) = ARR (:,J,I)
-!print*, K, ';', SUM(ARR(:,J,I))
        call mpi_pack(ARR(:,J,I), NZ,MPI_real, buffer(1:size1,m) &
            , nbyt1, bpos1, MPI_COMM_WORLD, mpi__ierror)
 
@@ -569,6 +568,7 @@ call keep_workers_waiting()
     REAL(DP)  :: DPSYN(NUMW)
     REAL(DP)  :: DUM(NUMW,NZ)
     REAL(DP)  :: GDUM(NUMW)
+    REAL(SP)  :: VTEST(SIZE(EQVDSYN,DIM=2))
     !
     !IF (MRESPFUNCT.EQV..TRUE.) THEN
       EQVDSYN(:,:)=0.E0
@@ -667,6 +667,15 @@ call keep_workers_waiting()
           NULLIFY(PTR_COEF)
         ENDIF !Invert atm. param.
       ENDDO ! Atm. param.
+
+
+VTEST(:)=0
+VTEST = SUM(ABS(EQVDSYN), DIM=1)
+DO IP=1,SIZE(VTEST)
+  IF (HUGE(VTEST(IP)).LT.VTEST(IP)) THEN
+    EQVDSYN(:,IP)=0
+  ENDIF
+ENDDO
     !ENDIF
     !
   END SUBROUTINE CALCULATE_EQUIVALENT_DSYN
@@ -802,7 +811,6 @@ call keep_workers_waiting()
       IF (INV_STK(II).EQV..TRUE.) THEN
         !
         ! Here, we have to be careful if a LSF is given:
-!PRINT*, 'Previous: ', SYN1D(II,:)
         IF (MLSF.EQV..TRUE.) THEN
           FFTY1D(:)=0.0D0
           DPSYN(:)=DBLE(SYN1D(II,:))
@@ -916,7 +924,7 @@ call keep_workers_waiting()
          !
          ! Continuum opacity at 5000 A (only for conversion to TAU5)
          CALL OPAC_CONTINUUM(TEM(K),5000.0D0,NELEC,NHYD,KC5(K))
-         KC5(K)=KC5(K)/NHYD*(1.0D0/MAMU)/MW(K)
+         KC5(K)=KC5(K)/NHYD*(1.0D0/MAMU)!/MW(K)
          !
 ! Skip too deep layers, as their opacity is so large that they become the boundary condition:
          IF ((MSYNTHESIS.EQV..TRUE.).OR.(MINVERSION.EQV..TRUE.)) THEN

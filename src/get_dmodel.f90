@@ -817,7 +817,8 @@ IF (mpi__myrank.eq.0) PRINT*, IFREEP, INJEVALS
         ENDIF
       ENDDO
       PRINT*, '    -> ', CNT, 'Filtered!'
-      STOP
+
+
     ENDIF
     !
     !
@@ -2033,7 +2034,7 @@ ENDIF
         !
         IPAR=0
         ISIGMAP3D(:,:,:)=0.D0
-PRINT*, 'Weights: ', WSTK, 'NUMW: ', NUMW
+PRINT*, 'Weights: ', WSTK, 'NUMW: ', NUMW, "Noise: ", ISIGMA
         DO I=1,4
           IF (INV_STK(I).EQV..TRUE.) THEN
             ISIGMAP3D(IPAR*NUMW+1:(IPAR+1)*NUMW,:,:)=WSTK(I)**2/ISIGMA**2
