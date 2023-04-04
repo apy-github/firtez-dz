@@ -152,21 +152,16 @@ MODULE INPUT_FILE
     LOGICAL                          :: EXISTS
     !
     CONDIT=.TRUE.
-    DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
+    reading: DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
 
       START_LINE=START_LINE+1
       LINE=INPUT_READ_LINES(START_LINE)
 
-      ! Check if the section has finished:
-      DO J=1,LEN(LINE)
-        IF (LINE(J:J).EQ.':') THEN
-          CONDIT=.FALSE.
-          START_LINE=START_LINE-1
-          EXIT
-        ENDIF
-      ENDDO
-
-      IF (CONDIT.EQV..FALSE.) EXIT
+      if (scan(line, ":").ne.0) then 
+        CONDIT=.FALSE.
+        START_LINE=START_LINE-1
+        EXIT reading
+      endif
 
       DUMIP=0
       DUMSP=0.0
@@ -199,7 +194,7 @@ MODULE INPUT_FILE
       IF (DUMVERB.EQV..TRUE.) MVERBOSE=DUMIP
       IF (TRIM(LINE).EQ.'PROGRESSIVE') MPROGRES=.TRUE.
       !
-    ENDDO
+    ENDDO reading
     !
     ! Can I write into outpath?
     !
@@ -279,23 +274,19 @@ MODULE INPUT_FILE
     IERR=0
     NUM_LINES_OBS=0
     
-    DO WHILE (START_LINE.LE.INPUT_READ_NUMBER)
+    reading: DO WHILE (START_LINE.LE.INPUT_READ_NUMBER)
        !
        START_LINE=START_LINE+1
        LINE=INPUT_READ_LINES(START_LINE)
-!PRINT*, TRIM(LINE)
        !
-       DO J=1,LEN(LINE)
-         IF (':'.EQ.LINE(J:J)) THEN
-           END_FIELD=.TRUE.
-           START_LINE=START_LINE-1
-           EXIT
-         ENDIF
-       ENDDO
-       IF (END_FIELD.EQV..TRUE.) EXIT
+      if (scan(line, ":").ne.0) then 
+        END_FIELD=.TRUE.
+        START_LINE=START_LINE-1
+        EXIT reading
+      endif
        NUM_LINES_OBS=NUM_LINES_OBS+1
        LINES(NUM_LINES_OBS)=LINE
-    ENDDO
+    ENDDO reading
     CLOSE(1)
 
     !
@@ -501,6 +492,7 @@ MODULE INPUT_FILE
        !
        CNT = CNT + 1
        LINE=INPUT_READ_LINES(CNT)
+print*, CNT, TRIM(LINE)
        !
        SELECT CASE (TRIM(LINE))
        CASE('LINES:')
@@ -1092,24 +1084,18 @@ ENDIF
     MAXSTEPS=5
     MITERLOG=.FALSE.
     !
-    !NUM_LINES_OBS=0
     CONDIT=.TRUE.
-    !DO WHILE (CONDIT.EQV..TRUE.)
-    DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
+    reading: DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
 
       START_LINE=START_LINE+1
       LINE=INPUT_READ_LINES(START_LINE)
 
       ! Check if the section has finished:
-      DO J=1,LEN(LINE)
-        IF (LINE(J:J).EQ.':') THEN
-          CONDIT=.FALSE.
-          START_LINE=START_LINE-1
-          EXIT
-        ENDIF
-      ENDDO
-      IF (CONDIT.EQV..FALSE.) EXIT
-      !NUM_LINES_OBS=NUM_LINES_OBS+1
+      if (scan(line, ":").ne.0) then 
+        CONDIT=.FALSE.
+        START_LINE=START_LINE-1
+        EXIT reading
+      endif
       !
       CALL SPLIT_READ_LINE_WEIGHTS(LINE, 'TEM', NZ, INV_ATMPAR(1) &
          , WEIGHT,NSLB_MAX(1))
@@ -1135,7 +1121,7 @@ ENDIF
       IF (MITERLOG.EQV..TRUE.) MAXSTEPS=IVALUE
       ! End New.
       !
-    ENDDO
+    ENDDO reading
     !
     !
 IF (mpi__myrank.EQ.0) THEN
@@ -1169,21 +1155,17 @@ ENDIF
     VREGULARIZATION=.TRUE.
     !
     CONDIT=.TRUE.
-    DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
+    reading: DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
 
       START_LINE=START_LINE+1
       LINE=INPUT_READ_LINES(START_LINE)
 
       ! Check if the section has finished:
-      DO J=1,LEN(LINE)
-        IF (LINE(J:J).EQ.':') THEN
-          CONDIT=.FALSE.
-          START_LINE=START_LINE-1
-          EXIT
-        ENDIF
-      ENDDO
-      IF (CONDIT.EQV..FALSE.) EXIT
-      !NUM_LINES_OBS=NUM_LINES_OBS+1
+      if (scan(line, ":").ne.0) then 
+        CONDIT=.FALSE.
+        START_LINE=START_LINE-1
+        EXIT reading
+      endif
       !
       CALL SPLIT_READ_LINE_WEIGHTS(LINE, 'TEM', 1, DUMLOG &
          , DUMR,PEN_TYP(1))
@@ -1202,7 +1184,7 @@ ENDIF
       CALL SPLIT_READ_LINE_WEIGHTS(LINE, 'VLOS', 1, DUMLOG &
          , DUMR,PEN_TYP(7))
       !
-    ENDDO
+    ENDDO reading
     !CLOSE(1)
     !
     !
@@ -1235,21 +1217,17 @@ ENDIF
     VREGULARIZATION=.TRUE.
     !
     CONDIT=.TRUE.
-    DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
+    reading: DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
 
       START_LINE=START_LINE+1
       LINE=INPUT_READ_LINES(START_LINE)
 
       ! Check if the section has finished:
-      DO J=1,LEN(LINE)
-        IF (LINE(J:J).EQ.':') THEN
-          CONDIT=.FALSE.
-          START_LINE=START_LINE-1
-          EXIT
-        ENDIF
-      ENDDO
-      IF (CONDIT.EQV..FALSE.) EXIT
-      !NUM_LINES_OBS=NUM_LINES_OBS+1
+      if (scan(line, ":").ne.0) then 
+        CONDIT=.FALSE.
+        START_LINE=START_LINE-1
+        EXIT reading
+      endif
       !
       CALL SPLIT_READ_LINE_WEIGHTS(LINE, 'TEM', 1, DUMLOG &
          , PEN_ALP(1), DUMI)
@@ -1268,7 +1246,7 @@ ENDIF
       CALL SPLIT_READ_LINE_WEIGHTS(LINE, 'VLOS', 1, DUMLOG &
          , PEN_ALP(7), DUMI)
       !
-    ENDDO
+    ENDDO reading
     !CLOSE(1)
     !
     !
@@ -1299,19 +1277,15 @@ ENDIF
     REAL(SP)                         :: DWEIGHT
     !
     CONDIT=.TRUE.
-    !DO WHILE (CONDIT.EQV..TRUE.)
-    DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
+    reading: DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
       START_LINE=START_LINE+1
       LINE=INPUT_READ_LINES(START_LINE)
       ! Check if the section has finished:
-      DO J=1,LEN(LINE)
-        IF (LINE(J:J).EQ.':') THEN
-          CONDIT=.FALSE.
-          START_LINE=START_LINE-1
-          EXIT
-        ENDIF
-      ENDDO
-      IF (CONDIT.EQV..FALSE.) EXIT
+      if (scan(line, ":").ne.0) then 
+        CONDIT=.FALSE.
+        START_LINE=START_LINE-1
+        EXIT reading
+      endif
       !
       CALL SPLIT_READ_LINE_WEIGHTS(LINE, 'STKI', 1, INV_STK(1), WSTK(1), WEIGHT, NSTKINV)
       CALL SPLIT_READ_LINE_WEIGHTS(LINE, 'STKQ', 1, INV_STK(2), WSTK(2), WEIGHT, NSTKINV)
@@ -1319,7 +1293,7 @@ ENDIF
       CALL SPLIT_READ_LINE_WEIGHTS(LINE, 'STKV', 1, INV_STK(4), WSTK(4), WEIGHT, NSTKINV)
       CALL SPLIT_READ_LINE_WEIGHTS(LINE, 'AUTO', 1, AUTOWEIGHT, DWEIGHT, WEIGHT)
       !
-    ENDDO
+    ENDDO reading
     !
     MINW=SQRT(WSTK(1)**2+WSTK(2)**2+WSTK(3)**2+WSTK(4)**2)/SQRT(REAL(NSTKINV))
     !
@@ -1515,27 +1489,23 @@ ENDIF
     CHARACTER*800                    :: LINE
     CHARACTER(LEN=1)                 :: FIRSTCHAR
     !
-    NUM_LINES_OBS=0
+    !NUM_LINES_OBS=0
     CONDIT=.TRUE.
     !DO WHILE (CONDIT.EQV..TRUE.)
-    DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
+    reading: DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
       !
       START_LINE=START_LINE+1
       LINE=INPUT_READ_LINES(START_LINE)
       !
-      IF (IERR.LT.0) EXIT
       ! CHECK IF THE SECTION HAS FINISHED:
-      DO J=1,LEN(LINE)
-        IF (LINE(J:J).EQ.':') THEN
-          CONDIT=.FALSE.
-          START_LINE=START_LINE-1
-          EXIT
-        ENDIF
-      ENDDO
+      if (scan(line, ":").ne.0) then 
+        CONDIT=.FALSE.
+        START_LINE=START_LINE-1
+        EXIT reading
+      endif
       !
-      IF (CONDIT.EQV..TRUE.) NUM_LINES_OBS=NUM_LINES_OBS+1
       IF (CONDIT.EQV..TRUE.) FIRSTCHAR=TRIM(LINE)
-    ENDDO
+    ENDDO reading
     ! CHECK IF ONE OF THE KEYWORDS IS PRESENT:
     IF (FIRSTCHAR.EQ.'T') HSRA_NORMALIZATION = .TRUE.
     IF (FIRSTCHAR.EQ.'F') HSRA_NORMALIZATION = .FALSE.
@@ -1579,21 +1549,16 @@ ENDIF
     ISFILENAME=.FALSE.
     COU_PSFFNAME=""
     !
-    !DO WHILE (CONDIT.EQV..TRUE.)
-    DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
+    reading: DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
       !
       START_LINE=START_LINE+1
       LINE=INPUT_READ_LINES(START_LINE)
       ! Check if the section has finished:
-      DO J=1,LEN(LINE)
-        IF (LINE(J:J).EQ.':') THEN
-          CONDIT=.FALSE.
-          START_LINE=START_LINE-1
-          EXIT
-        ENDIF
-      ENDDO
-      !
-      IF (CONDIT.EQV..FALSE.) EXIT
+      if (scan(line, ":").ne.0) then 
+        CONDIT=.FALSE.
+        START_LINE=START_LINE-1
+        EXIT reading
+      endif
       !
       NUMC=NCOLUMNS(LINE)
       IF (NUMC.EQ.1) THEN
@@ -1620,7 +1585,7 @@ IF (mpi__myrank.EQ.0) THEN
 ENDIF
       ENDIF
       !
-    ENDDO
+    ENDDO reading
     !
     IF ((COUPLED.EQV..TRUE.).AND.(ISFILENAME.EQV..FALSE.)) THEN
 IF (mpi__myrank.EQ.0) THEN
@@ -1786,19 +1751,15 @@ ENDIF
     NUM_LINES_OBS=0
     CONDIT=.TRUE.
     I=0
-    !DO WHILE (CONDIT.EQV..TRUE.)
-    DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
+    reading: DO WHILE (START_LINE.LT.INPUT_READ_NUMBER)
       START_LINE=START_LINE+1
       LINE=INPUT_READ_LINES(START_LINE)
       ! Check if the section has finished:
-      DO J=1,800
-        IF (LINE(J:J).EQ.':') THEN
-          CONDIT=.FALSE.
-          START_LINE=START_LINE-1
-          EXIT
-        ENDIF
-      ENDDO
-      IF (CONDIT.EQV..FALSE.) EXIT
+      if (scan(line, ":").ne.0) then 
+        CONDIT=.FALSE.
+        START_LINE=START_LINE-1
+        EXIT reading
+      endif
       !
       NCOL=NCOLUMNS(LINE)
       IF (NCOL.EQ.2) THEN
@@ -1867,7 +1828,7 @@ ENDIF
       ENDIF
 
       !
-    ENDDO
+    ENDDO reading
     !
     IF (NUM_LINES_OBS.NE.NUML) THEN
 IF (mpi__myrank.EQ.0) THEN
@@ -2041,18 +2002,15 @@ ENDIF
     I=0
     CONDIT=.TRUE.
     !
-    DO WHILE (START_LINE < INPUT_READ_NUMBER)
+    reading: DO WHILE (START_LINE < INPUT_READ_NUMBER)
        START_LINE=START_LINE+1
        LINE=INPUT_READ_LINES(START_LINE)
        ! Check if the section has finished:
-       DO J=1,800
-          IF (LINE(J:J) == ':') THEN
-             CONDIT=.FALSE.
-             START_LINE=START_LINE-1
-             EXIT
-          ENDIF
-       ENDDO
-       IF (.NOT.CONDIT) EXIT
+      if (scan(line, ":").ne.0) then 
+        CONDIT=.FALSE.
+        START_LINE=START_LINE-1
+        EXIT reading
+      endif
        NCOL=NCOLUMNS(LINE)
        !PRINT*,NCOL,':',LINE
        SELECT CASE(NCOL)
@@ -2084,7 +2042,7 @@ ENDIF
           ENDIF ! Writing error
        ENDIF
        NUM_LINES_OBS=NUM_LINES_OBS+1
-    ENDDO
+    ENDDO reading
     ! Now we need to check that NLTE lines are not blended
     DO I=1,NUML
        IF (IND_FOUND(I) /= -1) THEN
