@@ -16,8 +16,8 @@ from matplotlib import ticker
 pl.ion()
 #
 pl.rcParams.update({'font.size':15})
-#pl.rcParams.update({'text.usetex':False})
-pl.rcParams.update({'text.usetex':True})
+pl.rcParams.update({'text.usetex':False})
+#pl.rcParams.update({'text.usetex':True})
 pl.rcParams['xtick.minor.visible'] = True
 pl.rcParams['ytick.minor.visible'] = True
 #
@@ -2904,5 +2904,23 @@ def write_lsf(fname, data, fmt_type=np.float32):
   f.close()
   
   return
+#
+def write_psf(fname, data, fmt_type=np.float32, vv=2):
 
+  bmaxrec=1073741784
+  nmaxrec=bmaxrec/4
 
+  ndims = list(data.shape)
+  tmp = np.prod(ndims)
+  nrec = tmp//nmaxrec
+  if (tmp%nmaxrec!=0):
+    nrec+=1
+  nrec += 1
+  rec = np.array([vv,-vv,161906,nrec,2] + ndims[::-1], dtype=fmt_type)
+
+  f = FortranFile(fname, mode='w')
+  f.write_record(rec)
+  f.write_record(np.ascontiguousarray(data.flatten(), dtype=fmt_type))
+  f.close()
+
+  return
